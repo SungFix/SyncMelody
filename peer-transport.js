@@ -3,8 +3,8 @@
  * O primeiro jogador é o líder e coordena o estado via PeerJS DataConnections.
  * O serviço público PeerJS Cloud é usado apenas para sinalização WebRTC.
  */
-const INSTRUMENTS = ['keys', 'bass', 'lead', 'drums'];
-const SONGS = new Set(['neon-rush', 'pixel-parade', 'midnight-drive']);
+const INSTRUMENTS = ['guitar', 'drums', 'bass', 'contrabass'];
+const SONGS = new Set(['fogo-na-garagem', 'marcha-de-aco', 'ecos-do-asfalto', 'ceu-em-ruinas']);
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const idForCode = code => `syncmelody-v1-${code.toLowerCase()}`;
 const safeName = value => String(value || 'Jogador').replace(/[<>\\]/g, '').trim().slice(0, 18) || 'Jogador';
@@ -89,7 +89,7 @@ export async function createPeerTransport({ mode, code, onMessage, onClose, Peer
     if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
     if (msg.type === 'ping') return sendTo(id, {type:'pong', echoed:msg.sentAt, serverNow:Date.now()});
     if (msg.type === 'create' && id === selfId) {
-      room = {code:activeCode, hostId:selfId, songId:'neon-rush', state:'lobby', startAt:null, players:[]};
+      room = {code:activeCode, hostId:selfId, songId:'fogo-na-garagem', state:'lobby', startAt:null, players:[]};
       accept(id, msg.name, msg.instrument); return;
     }
     if (msg.type === 'join') {
