@@ -9,10 +9,10 @@
 
 | Instrumento | Teclas | Observação |
 | --- | --- | --- |
-| Guitarra | A S D J K L (6) | Cordas de guitarra elétrica; com distorção e acordes no modo partitura |
-| Bateria | A S D F J K L ; (8) | Bumbo, caixa, chimbal fechado e aberto, dois tons e dois pratos |
-| Baixo elétrico | A S D J K (5) | Cinco cordas, com afinação B E A D G |
-| Contrabaixo acústico | A S J K (4) | Quatro cordas, afinação E A D G |
+| Guitarra | F J (2) | Riff/acorde e solo/melodia |
+| Bateria | D F J K (4) | Bumbo, caixa, chimbal e prato |
+| Baixo elétrico | D F J K (4) | Notas Mi, Lá, Ré e Sol |
+| Contrabaixo acústico | D F J K (4) | Notas Mi, Lá, Ré e Sol |
 
 Os botões na tela funcionam com mouse e toque. Use o botão **Modo livre — testar instrumentos** na tela principal, ou **Iniciar ensaio livre em grupo** depois de criar uma sala.
 
@@ -63,3 +63,8 @@ A separação anterior foi feita **por filtragem de frequências**, não por uma
 ### Direitos autorais
 
 O site público contém **apenas o código e a partitura**; os MP3s não são disponibilizados por padrão pelo GitHub Pages. Use apenas gravações que você pode copiar e compartilhar. O ZIP é entregue diretamente nesta conversa para uso pessoal.
+## Correção do carregamento dos 3 MP3s
+
+Na página inicial, escolha os arquivos nos campos **Guitarra**, **Bateria** e **Baixo**; também é possível selecionar os três juntos no campo opcional. O nome do arquivo não importa quando você seleciona cada instrumento individualmente. A mensagem abaixo mostra um ✓ para cada arquivo reconhecido. Só depois dos três itens marcados inicie **Rock do seu MP3**. Não use o arquivo original `musicqa.mp3` como substituto de uma das faixas.
+
+O modo de música importada reproduz os três arquivos no tempo original, mas com volume 0 até o acerto. Nos quatro instrumentos de jogo, o contrabaixo compartilha o áudio da faixa de baixo. O repositório público não inclui os MP3s por respeito aos direitos de distribuição.

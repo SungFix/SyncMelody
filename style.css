@@ -45,3 +45,9 @@
 .mp3-import p{font-size:11px;line-height:1.5;color:#aaa9bb;margin:9px 0 0}
 .mp3-import p.ready{color:#d5ff6a}
 @media(max-width:440px){.mp3-import{padding:10px}.mp3-import input{font-size:10px}}
+/* Importação de áudio: cada instrumento tem seu seletor. */
+.stem-pickers{display:grid;grid-template-columns:1fr;gap:10px;margin:4px 0 15px}
+.stem-pickers label{display:block;font-size:12px;font-weight:750;color:#eeeef5}
+.stem-pickers label span{display:block;margin:0 0 5px}
+.stem-pickers input[type=file]{font-size:11px}
+.mp3-import .stem-batch-label{display:block;color:#aca9c2;margin-top:12px;font-size:10px}

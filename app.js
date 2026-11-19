@@ -1,6 +1,7 @@
 import {createPeerTransport} from './peer-transport.js';
 import {instruments, songs, createChart, instrumentLayouts, keyLabel} from './music.js';
 import {SampleAudioEngine} from './sample-audio.js';
+import {StemPlayer, STEM_LABELS, STEM_PARTS} from './stem-player.js?v=2';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -20,13 +21,51 @@ let selectedSong='fogo-na-garagem';
 let socket=null, peerTransport=null, selfId=null, room=null, reconnecting=false, pendingCreateSong=null;
 let serverOffset=0, pingSent=0, noticeTimeout=null, gameSession=null, raf=0, soundMuted=false;
 let freeKeyCount=0;
-let importedAudio=null, backingSource=null;
+let stemPlayer=null;
 const currentLayout=()=>instrumentLayouts[gameSession?.part||selectedInstrument];
 const laneForCode=code=>currentLayout().keys.indexOf(code);
 const LANE_COLORS=['#d5ff6a','#ffabd8','#a4baff','#ffd084'];
 const INSTRUMENT_IDS=instruments.map(i=>i.id);
 
 const audio=new SampleAudioEngine();
+async function getStems(){
+  await audio.unlock();
+  if(!stemPlayer)stemPlayer=new StemPlayer(audio.ctx,audio.master);
+  return stemPlayer;
+}
+function updateStemStatus(message=''){
+  const status=$('#local-mp3-status');
+  const loaded=STEM_PARTS.map(part=>`${stemPlayer?.buffers.has(part)?'✓':'○'} ${STEM_LABELS[part]}`);
+  const ready=!!stemPlayer?.ready();
+  status.textContent=`${loaded.join('  ·  ')}. ${message || (ready?'PRONTO! Os sons só serão liberados quando acertar as notas.':'Selecione as 3 faixas PREVIA, juntas ou uma de cada vez.')}`;
+  status.classList.toggle('ready',ready);
+}
+async function requireStems(){
+  const stems=await getStems();
+  if(!stems.ready()){
+    await stems.loadBundled();
+    updateStemStatus();
+  }
+  if(!stems.ready())throw new Error('Faltam faixas! Carregue os MP3s separados de GUITARRA, BATERIA e BAIXO, não o MP3 completo.');
+  return stems;
+}
+async function importStemFiles(files,part=null){
+  const status=$('#local-mp3-status');
+  try{
+    const stems=await getStems();
+    status.textContent='Lendo e sincronizando seus áudios. Não feche a página…';
+    if(part){
+      if(files.length!==1)throw new Error('Selecione um arquivo MP3 para esse instrumento.');
+      await stems.setFile(part,files[0]);
+    }else await stems.setFiles(files);
+    updateStemStatus();
+    if(!room||isHost()){
+      selectedSong='arquivo-rock';renderSongs();
+      if(room)socketSend({type:'song',songId:selectedSong});
+    }
+    toast(stems.ready()?'As 3 faixas estão prontas! Jogue e ouça apenas ao acertar.':'Faixa carregada! Selecione as que ainda estão pendentes.');
+  }catch(error){updateStemStatus();toast(error.message);}
+}
 
 function instrument(id){return instruments.find(i=>i.id===id)||instruments[0];}
 function song(id){return songs.find(s=>s.id===id)||songs[0];}
@@ -133,7 +172,12 @@ function handleServer(msg){
     syncRoom(msg.room);
   } else if(msg.type==='started'){
     if(msg.mode==='free'){startFree({online:true});}
-    else {audio.prepareAll().catch(e=>toast(e.message));beginGame({online:true,startAt:msg.startAt,songId:msg.songId});}
+    else {
+      if(msg.songId==='arquivo-rock'){
+        if(!stemPlayer?.ready()){toast('Para tocar esta música, carregue os 3 arquivos de instrumentos antes de iniciar.');return;}
+      }else audio.prepareAll().catch(e=>toast(e.message));
+      beginGame({online:true,startAt:msg.startAt,songId:msg.songId});
+    }
   } else if(msg.type==='jam' && gameSession?.mode==='free') {
     if(msg.playerId!==selfId && INSTRUMENT_IDS.includes(msg.instrument)){
       const keys=instrumentLayouts[msg.instrument].keys;
@@ -146,7 +190,10 @@ function handleServer(msg){
     if(gameSession)renderBand();
   } else if(msg.type==='hit'&&gameSession&&gameSession.online){
     const note=gameSession.chart.events[msg.noteIndex];
-    if(note&&note.part===msg.instrument&&msg.playerId!==selfId)audio.play(note.part,note,null,.9);
+    if(note&&note.part===msg.instrument&&msg.playerId!==selfId){
+      if(gameSession.chart.song.id==='arquivo-rock')stemPlayer?.hit(note.part,note,gameSession.chart.byPart[note.part]);
+      else audio.play(note.part,note,null,.9);
+    }
   } else if(msg.type==='error'){selectedInstrument=ownPlayer()?.instrument||selectedInstrument;renderInstrumentChoices();toast(msg.message);}
   else if(msg.type==='left'){room=null;renderRoom();}
 }
@@ -167,50 +214,40 @@ ui.instrumentOptions.addEventListener('click',e=>{
 });
 ui.nickname.addEventListener('change',()=>{if(room)socketSend({type:'name',name:cleanName()});});
 $('#local-mp3').addEventListener('change',async event=>{
-  const file=event.target.files?.[0];if(!file)return;
-  if(file.size>70*1024*1024){toast('Escolha um MP3 com até 70 MB.');return;}
-  const status=$('#local-mp3-status');
-  try{
-    status.textContent='Lendo áudio e preparando a sincronização…';status.classList.remove('ready');
-    await audio.unlock();
-    const buffer=await audio.ctx.decodeAudioData(await file.arrayBuffer());
-    if(Math.abs(buffer.duration-340.24)>3){
-      status.textContent='Esse mapa de notas foi feito para a música enviada (5:40). Selecione essa gravação, original ou com voz atenuada.';
-      return;
-    }
-    importedAudio=buffer;
-    status.textContent=`✓ ${file.name} carregado (${formatTime(buffer.duration)}). Só fica neste navegador.`;
-    status.classList.add('ready');
-    if(!room||isHost()){
-      selectedSong='arquivo-rock';renderSongs();
-      if(room)socketSend({type:'song',songId:selectedSong});
-    }
-    toast('MP3 pronto! Escolha seu instrumento e inicie o jogo.');
-  }catch(error){status.textContent='Não foi possível abrir este MP3 neste navegador.';toast(error.message);}
+  const files=[...(event.target.files||[])];
+  if(files.length)await importStemFiles(files);
+  event.target.value='';
 });
+for(const part of STEM_PARTS){
+  const input=$(`#stem-${part}`);
+  input?.addEventListener('change',async event=>{
+    const files=[...(event.target.files||[])];
+    if(files.length)await importStemFiles(files,part);
+    event.target.value='';
+  });
+}
+updateStemStatus();
 $('#toggle-join-btn').addEventListener('click',()=>{ui.joinForm.hidden=!ui.joinForm.hidden;if(!ui.joinForm.hidden)ui.roomCodeInput.focus();});
 if(invite){ui.joinForm.hidden=false;ui.roomCodeInput.value=invite;}
 ui.roomCodeInput.addEventListener('input',()=>{ui.roomCodeInput.value=ui.roomCodeInput.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,6);});
 ui.roomCodeInput.addEventListener('keydown',e=>{if(e.key==='Enter')$('#join-btn').click();});
 $('#solo-btn').addEventListener('click',async()=>{
-  if(selectedSong==='arquivo-rock'&&!importedAudio){toast('Carregue o MP3 de 5:40 acima para jogar esta música.');return;}
-  try{await audio.unlock();if(selectedSong==='arquivo-rock'){audio.prepareAll().catch(e=>toast(e.message));}else{toast('Carregando amostras reais da banda…');await audio.prepareAll();}beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
+  try{await audio.unlock();if(selectedSong==='arquivo-rock')await requireStems();else{toast('Carregando amostras reais da banda…');await audio.prepareAll();}beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
   catch(e){toast(e.message);}
 });
 $('#create-btn').addEventListener('click',async()=>{
-  try{await audio.unlock();audio.prepareAll().catch(e=>toast(e.message));await connect('create');pendingCreateSong=selectedSong;socketSend({type:'create',name:cleanName(),instrument:selectedInstrument});}
+  try{await audio.unlock();if(selectedSong!=='arquivo-rock')audio.prepareAll().catch(e=>toast(e.message));await connect('create');pendingCreateSong=selectedSong;socketSend({type:'create',name:cleanName(),instrument:selectedInstrument});}
   catch(e){toast(e.message);}
 });
 $('#join-btn').addEventListener('click',async()=>{
   const code=ui.roomCodeInput.value.toUpperCase().trim();
   if(code.length!==6){toast('Digite o código de 6 caracteres.');return;}
-  try{await audio.unlock();audio.prepareAll().catch(e=>toast(e.message));await connect('join',code);socketSend({type:'join',code,name:cleanName(),instrument:selectedInstrument});socketSend({type:'ping',sentAt:Date.now()});}
+  try{await audio.unlock();if(selectedSong!=='arquivo-rock')audio.prepareAll().catch(e=>toast(e.message));await connect('join',code);socketSend({type:'join',code,name:cleanName(),instrument:selectedInstrument});socketSend({type:'ping',sentAt:Date.now()});}
   catch(e){toast(e.message);}
 });
 $('#start-btn').addEventListener('click',async()=>{
   if(!isHost())return;
-  if(selectedSong==='arquivo-rock'&&!importedAudio){toast('Carregue seu MP3 antes de iniciar a música.');return;}
-  try{await audio.unlock();socketSend({type:'start',mode:'rhythm'});}
+  try{await audio.unlock();if(selectedSong==='arquivo-rock')await requireStems();socketSend({type:'start',mode:'rhythm'});}
   catch(e){toast(e.message);}
 });
 
@@ -270,25 +307,13 @@ function beginGame({online,startAt,songId}){
   ui.progressFill.style.width='0%';
   ui.progressTime.textContent=`00:00 / ${formatTime(chart.duration)}`;
   audio.stopAll();
-  startImportedBacking(songId,startAt,online);
+  stemPlayer?.stop();
+  if(songId==='arquivo-rock'){
+    if(!stemPlayer?.ready()){toast('As 3 faixas ainda não foram carregadas.');return;}
+    const delay=(startAt-(Date.now()+(online?serverOffset:0)))/1000;
+    stemPlayer.start(delay);
+  }
   requestAnimationFrame(()=>{resizeCanvas();drawFrame();});
-}
-function stopBacking(){
-  if(backingSource){try{backingSource.stop();}catch{}backingSource.disconnect();backingSource=null;}
-}
-function startImportedBacking(songId,startAt,online){
-  stopBacking();
-  if(songId!=='arquivo-rock')return;
-  if(!importedAudio||!audio.ctx){toast('Falta carregar o MP3 neste navegador antes de tocar.');return;}
-  const seconds=(startAt-(Date.now()+(online?serverOffset:0)))/1000;
-  const offset=Math.max(0,-seconds);
-  if(offset>=importedAudio.duration)return;
-  const src=audio.ctx.createBufferSource(),gain=audio.ctx.createGain();
-  src.buffer=importedAudio;gain.gain.value=.72;
-  src.connect(gain);gain.connect(audio.master);
-  src.start(audio.ctx.currentTime+Math.max(.005,seconds),offset);
-  backingSource=src;
-  src.onended=()=>{if(backingSource===src)backingSource=null;src.disconnect();gain.disconnect();};
 }
 function setStageMode(mode){
   const free=mode==='free';
@@ -316,7 +341,7 @@ function renderFreeControls(){
 }
 function startFree({online}){
   if(gameSession)stopGame();
-  stopBacking();
+  stemPlayer?.stop();
   gameSession={mode:'free',online,part:online?(ownPlayer()?.instrument||selectedInstrument):selectedInstrument,ended:false};
   freeKeyCount=0;
   ui.landing.hidden=true;ui.game.hidden=false;ui.results.hidden=true;
@@ -374,6 +399,7 @@ function renderBand(){
   }).join('');
 }
 function scheduleBacking(g,elapsed){
+  if(g.chart.song.id==='arquivo-rock')return;
   const events=g.chart.events;
   while(g.nextAudio<events.length && events[g.nextAudio].t<=elapsed+.16){
     const note=events[g.nextAudio++];
@@ -421,7 +447,8 @@ function playLane(lane){
   else if(grade==='GREAT'){g.great++;g.score+=170+Math.min(100,g.combo);}
   else{g.good++;g.score+=80;}
   showJudge(grade);
-  audio.play(g.part,chosen,null,1);
+  if(g.chart.song.id==='arquivo-rock')stemPlayer?.hit(g.part,chosen,g.chart.byPart[g.part]);
+  else audio.play(g.part,chosen,null,1);
   if(g.online)socketSend({type:'hit',noteIndex:chosen.index,score:g.score,combo:g.combo});
   updateScore();renderBand();
 }
@@ -499,7 +526,7 @@ function drawFrame(){
 }
 function finishGame(){
   const g=gameSession;if(!g||g.ended)return;
-  g.ended=true;cancelAnimationFrame(raf);updateMissed(g,Number.POSITIVE_INFINITY);audio.stopAll();
+  g.ended=true;cancelAnimationFrame(raf);updateMissed(g,Number.POSITIVE_INFINITY);audio.stopAll();stemPlayer?.stop();
   const total=g.perfect+g.great+g.good+g.miss;
   const accuracy=total?Math.round((g.perfect+g.great*.78+g.good*.5)/total*100):100;
   $('#result-score').textContent=g.score.toLocaleString('pt-BR');
@@ -512,7 +539,7 @@ function finishGame(){
 function stopGame(){
   cancelAnimationFrame(raf);
   gameSession=null;
-  stopBacking();
+  stemPlayer?.stop();
   audio.stopAll();
   $$('.lane-buttons button,.free-key').forEach(b=>b.classList.remove('active'));
 }

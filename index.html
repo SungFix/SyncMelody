@@ -56,9 +56,15 @@
           <div class="song-header"><span class="field-label">ESCOLHA A MÚSICA</span><span id="song-count" class="micro-info">4 ORIGINAIS + SEU MP3</span></div>
           <div class="song-list" id="song-list"></div>
           <div class="mp3-import">
-            <label for="local-mp3" class="field-label">🎛️ CARREGAR GUITARRA, BATERIA E BAIXO (3 MP3)</label>
+            <span class="field-label">🎛️ CARREGUE SUAS 3 FAIXAS SEPARADAS</span>
+            <div class="stem-pickers">
+              <label for="stem-guitar"><span>🎸 1. Guitarra</span><input type="file" id="stem-guitar" accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" /></label>
+              <label for="stem-drums"><span>🥁 2. Bateria</span><input type="file" id="stem-drums" accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" /></label>
+              <label for="stem-bass"><span>🎸 3. Baixo</span><input type="file" id="stem-bass" accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" /></label>
+            </div>
+            <label for="local-mp3" class="field-label stem-batch-label">Ou selecione os três arquivos PREVIA de uma vez:</label>
             <input type="file" id="local-mp3" multiple accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" />
-            <p id="local-mp3-status" role="status">Carregue os 3 MP3 originais PREVIA (juntos ou um de cada vez). 🎸 Guitarra · 🥁 Bateria · 🎸 Baixo. Apenas acertos liberam o som. Cada jogador carrega os próprios arquivos; eles não são enviados pela internet.</p>
+            <p id="local-mp3-status" role="status">○ Guitarra · ○ Bateria · ○ Baixo. Selecione as três faixas separadas.</p>
             <p class="stem-tip">Para a música “Rock do seu MP3”, a gravação fica muda até acertar as notas. O contrabaixo utiliza a faixa do baixo, pois não existe uma quarta gravação separada.</p>
           </div>
           <div id="entry-controls" class="entry-controls">
@@ -115,6 +121,6 @@
     <footer class="footer"><span>© SyncMelody · ROCK RHYTHM ARCADE</span><span>ROCK & METAL ORIGINAIS ✳</span></footer>
   </div>
   <script defer src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261119-mp3fix"></script>
 </body>
 </html>
