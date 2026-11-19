@@ -4,7 +4,7 @@
  * O serviço público PeerJS Cloud é usado apenas para sinalização WebRTC.
  */
 const INSTRUMENTS = ['guitar', 'drums', 'bass', 'contrabass'];
-const SONGS = new Set(['fogo-na-garagem', 'marcha-de-aco', 'ecos-do-asfalto', 'ceu-em-ruinas']);
+const SONGS = new Set(['fogo-na-garagem', 'marcha-de-aco', 'ecos-do-asfalto', 'ceu-em-ruinas', 'arquivo-rock']);
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const idForCode = code => `syncmelody-v1-${code.toLowerCase()}`;
 const safeName = value => String(value || 'Jogador').replace(/[<>\\]/g, '').trim().slice(0, 18) || 'Jogador';

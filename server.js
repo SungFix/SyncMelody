@@ -10,7 +10,7 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const rooms = new Map();
 const clients = new Map();
-const SONGS = new Set(['fogo-na-garagem', 'marcha-de-aco', 'ecos-do-asfalto', 'ceu-em-ruinas']);
+const SONGS = new Set(['fogo-na-garagem', 'marcha-de-aco', 'ecos-do-asfalto', 'ceu-em-ruinas', 'arquivo-rock']);
 const INSTRUMENTS = ['guitar', 'drums', 'bass', 'contrabass'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -33,7 +33,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   const target = path.resolve(BASE, `.${pathname === '/' ? '/index.html' : pathname}`);
-  if (!target.startsWith(BASE + path.sep) || !(['index.html','style.css','app.js','music.js','sample-audio.js','peer-transport.js'].includes(path.relative(BASE,target)) || /^samples\/(drums|soundfonts)\/[a-z0-9_.-]+$/.test(path.relative(BASE,target).replaceAll('\\','/')))) {
+  if (!target.startsWith(BASE + path.sep) || !(['index.html','style.css','app.js','music.js','sample-audio.js','peer-transport.js','imported-chart.js','stem-player.js'].includes(path.relative(BASE,target)) || (/^samples\/(drums|soundfonts)\/[a-z0-9_.-]+$/.test(path.relative(BASE,target).replaceAll('\\','/')) || /^stems\/musicqa-(guitarra|bateria|baixo)-PREVIA\.mp3$/.test(path.relative(BASE,target).replaceAll('\\','/'))))) {
     res.writeHead(404); res.end('Não encontrado'); return;
   }
   try {
@@ -147,7 +147,7 @@ wss.on('connection', ws => {
       sync(room);
       broadcast(room, {type:'started', mode:room.mode, startAt:room.startAt, songId:room.songId, serverNow:Date.now()});
     } else if (msg.type === 'jam' && room.state === 'playing' && room.mode==='free') {
-      const limits={guitar:6,drums:8,bass:5,contrabass:4};
+      const limits={guitar:2,drums:4,bass:4,contrabass:4};
       if(!Number.isInteger(msg.lane)||msg.lane<0||msg.lane>=limits[player.instrument])return;
       broadcast(room,{type:'jam',playerId:player.id,instrument:player.instrument,lane:msg.lane});
     } else if (msg.type === 'hit' && room.state === 'playing' && room.mode!=='free') {

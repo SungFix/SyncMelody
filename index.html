@@ -56,9 +56,10 @@
           <div class="song-header"><span class="field-label">ESCOLHA A MÚSICA</span><span id="song-count" class="micro-info">4 ORIGINAIS + SEU MP3</span></div>
           <div class="song-list" id="song-list"></div>
           <div class="mp3-import">
-            <label for="local-mp3" class="field-label">🎧 CARREGAR SUA MÚSICA (NO SEU APARELHO)</label>
-            <input type="file" id="local-mp3" accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" />
-            <p id="local-mp3-status" role="status">Selecione o MP3 de 5:40 para a faixa “Rock do seu MP3”. Cada jogador precisa carregar sua própria cópia. O áudio não é enviado ao GitHub.</p>
+            <label for="local-mp3" class="field-label">🎛️ CARREGAR GUITARRA, BATERIA E BAIXO (3 MP3)</label>
+            <input type="file" id="local-mp3" multiple accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" />
+            <p id="local-mp3-status" role="status">Carregue os 3 MP3 originais PREVIA (juntos ou um de cada vez). 🎸 Guitarra · 🥁 Bateria · 🎸 Baixo. Apenas acertos liberam o som. Cada jogador carrega os próprios arquivos; eles não são enviados pela internet.</p>
+            <p class="stem-tip">Para a música “Rock do seu MP3”, a gravação fica muda até acertar as notas. O contrabaixo utiliza a faixa do baixo, pois não existe uma quarta gravação separada.</p>
           </div>
           <div id="entry-controls" class="entry-controls">
             <button type="button" id="solo-btn" class="btn btn-primary"><span>▶</span> JOGAR SOZINHO <span class="btn-end">↗</span></button>

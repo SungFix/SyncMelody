@@ -43,11 +43,23 @@ npm start
 Acesse http://localhost:3000. O servidor local WebSocket inclui o suporte a salas e ensaio livre; o site publicado no Pages usa WebRTC.
 
 
-## Sua música (mapa aproximado)
+## Sua música: três faixas originais PREVIA (toque por acertos)
 
-- A nova faixa **Rock do seu MP3 (5:40)** usa um mapa aproximado dos ataques rítmicos da gravação fornecida. A gravação não está embutida no repositório.
-- Controles: **bateria D F J K** (4), **guitarra F J** (2), **baixo D F J K** (4), **contrabaixo D F J K** (4), também no modo livre.
-- Antes de começar, **cada jogador seleciona a própria cópia** do MP3 original ou com voz atenuada no navegador. O arquivo não é enviado ao GitHub nem aos outros jogadores.
-- A base do MP3 é agendada no Web Audio; a partitura é **estimada**, não uma transcrição perfeita nota a nota. O contrabaixo é uma linha tocável adicional, não um stem isolado da música.
-- A versão com voz atenuada é uma **aproximação por atenuação do centro do estéreo**, que pode reduzir outros instrumentos centrais. Não é extração vocal por IA.
-- Não publique gravações de terceiros sem os direitos necessários.
+Na faixa **Rock do seu MP3** há **três gravações de aproximadamente 5:40**, usadas sem editar, refazer, substituir ou misturar:
+
+| Instrumento jogável | Faixa usada | Teclas |
+| --- | --- | --- |
+| Guitarra | `musicqa-guitarra-PREVIA.mp3` | F J |
+| Bateria | `musicqa-bateria-PREVIA.mp3` | D F J K |
+| Baixo elétrico | `musicqa-baixo-PREVIA.mp3` | D F J K |
+| Contrabaixo | a MESMA faixa do baixo (não foi entregue uma quarta gravação) | D F J K |
+
+**Sem áudio automático:** as três faixas iniciam sincronizadas, mas completamente mudas. Um acerto no ritmo abre brevemente o volume do **instrumento correspondente**; uma nota errada ou não pressionada não libera som. Com vários acertos seguidos, a música pode soar mais contínua; sem acertos, ela fica muda. O áudio permanece na posição correta da gravação e nunca é substituído por amostras MIDI nesta faixa.
+
+**Como usar no GitHub Pages:** baixe o pacote das três prévias, extraia, clique no campo **Carregar guitarra, bateria e baixo (3 MP3)** e selecione os três arquivos (juntos ou um por vez). Cada participante precisa importar suas próprias cópias; os arquivos não são transmitidos para o servidor. No ZIP completo, os arquivos estão também dentro de `stems/`, e podem ser carregados automaticamente caso você use `npm start` no computador.
+
+A separação anterior foi feita **por filtragem de frequências**, não por uma IA dedicada. Por isso, alguns sons de outros instrumentos continuam presentes em cada gravação. Os mapas de notas também são estimados.
+
+### Direitos autorais
+
+O site público contém **apenas o código e a partitura**; os MP3s não são disponibilizados por padrão pelo GitHub Pages. Use apenas gravações que você pode copiar e compartilhar. O ZIP é entregue diretamente nesta conversa para uso pessoal.
