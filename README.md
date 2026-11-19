@@ -1,51 +1,52 @@
 # SyncMelody 🎶
 
-Jogo musical cooperativo no navegador para **1 a 4 pessoas**. Cada participante controla um instrumento distinto — teclado, baixo, synth ou bateria — pressionando **D, F, J, K** (ou tocando na tela). Tem três músicas originais e um modo solo com instrumentos automáticos.
+Jogo musical cooperativo para **1 a 4 pessoas** no navegador. Cada pessoa controla um instrumento diferente — teclado, baixo, sintetizador ou bateria — com as teclas **D, F, J, K** ou pelo toque na tela.
 
-## Jogar online (sem instalar nada)
-
-Acesse o site do projeto no GitHub Pages:
+## Abrir o jogo
 
 **https://sungfix.github.io/SyncMelody/**
 
-> O site só estará acessível depois de ativar o GitHub Pages uma vez: abra **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: main → / (root) → Save**. A publicação pode levar alguns minutos.
+O GitHub Pages precisa ser ativado **uma única vez** pelo proprietário do repositório:
 
-### Montar uma banda
+1. Abra [Settings → Pages](https://github.com/SungFix/SyncMelody/settings/pages).
+2. Em **Build and deployment**, escolha **Deploy from a branch**.
+3. Selecione **main** e a pasta **/ (root)**.
+4. Clique em **Save**. Aguarde o GitHub disponibilizar o site.
 
-1. Abra o site no navegador; selecione instrumento e música.
-2. O primeiro jogador clica em **CRIAR SALA** e copia o link de convite.
-3. Até três amigos abrem o link ou informam o código da sala, em outros navegadores ou dispositivos.
-4. O líder aperta **INICIAR APRESENTAÇÃO**. As notas são sincronizadas e cada pessoa toca sua própria parte.
-5. Quem estiver sozinho pode usar **JOGAR SOZINHO**: as partes não ocupadas tocam automaticamente.
+Depois de habilitado, o endereço acima abre o jogo diretamente, sem instalar programas.
 
-## Como funciona o multiplayer no GitHub Pages
+## Jogar em equipe
 
-O GitHub Pages hospeda apenas HTML/CSS/JavaScript. Para manter o multiplayer sem hospedar Node.js, a versão web utiliza **WebRTC DataChannels**, via **PeerJS** (`peerjs@1.5.5`), com sinalização gratuita do [PeerJS Cloud](https://peerjs.com/server/cloud). A máquina de quem cria a sala coordena a partida. Não há servidores nossos armazenando contas ou músicas.
+1. Selecione um apelido, um instrumento e a música.
+2. Clique em **Criar sala** e compartilhe o link.
+3. Até três amigos entram pelo link ou código.
+4. O líder clica em **Iniciar apresentação**.
+5. Cada um toca as notas do seu instrumento no ritmo. Instrumentos sem jogadores ficam automáticos.
 
-**Limitações conhecidas:** todos precisam de internet, navegador com WebRTC e acesso ao serviço PeerJS Cloud; redes restritivas podem bloquear as conexões. O serviço gratuito é de terceiros e não há garantia de disponibilidade ou latência. Se o líder sair, a sala termina. As partidas não ficam salvas. Os sons são gerados pela Web Audio API, sem músicas comerciais. Os jogos mantêm a sincronização por troca de horários, mas a latência da internet pode afetar a audição dos outros instrumentos.
+Também há **modo solo**, com acompanhamento automático.
 
-### Rodar localmente (opcional)
+## Multiplayer
 
-Para rodar o site estático, execute um servidor de arquivos, por exemplo:
+Como o GitHub Pages hospeda apenas arquivos estáticos, as salas online utilizam **WebRTC** e **PeerJS Cloud** para sinalização. Quem cria a sala coordena a partida. Não é necessário servidor Node.js para o site publicado.
+
+**Observações:** todos devem ter acesso à internet e usar um navegador com suporte a WebRTC. Algumas redes bloqueiam conexões diretas; o serviço gratuito de terceiros pode ter indisponibilidades ou latência. Se o líder sair, a sala é encerrada. O áudio é sintetizado no navegador e as três músicas são originais.
+
+## Rodar localmente
+
+Basta abrir os arquivos com um servidor estático, por exemplo:
 
 ```bash
 python -m http.server 8000
 ```
 
-Acesse `http://localhost:8000/`: as salas usam WebRTC. O modo solo também funciona.
+Acesse `http://localhost:8000/`. O modo solo não depende do PeerJS Cloud.
 
-O projeto preserva o servidor Node.js WebSocket da versão anterior para uso opcional em hospedagens com Node 18+. Com `npm start` ou o arquivo `INICIAR-SYNCBEAT.bat`, ele inicia em `http://localhost:3000/`, e as salas nesse endereço usam o servidor local em vez de PeerJS Cloud.
+## Arquivos do site
 
-```bash
-npm test
-npm start
-```
+- `index.html`: página e interface
+- `style.css`: visual responsivo
+- `app.js`: jogabilidade, som e interface
+- `music.js`: músicas e partituras
+- `peer-transport.js`: conexão entre até quatro navegadores
 
-## Arquivos
-
-- `index.html`, `style.css`, `app.js`, `music.js`: interface e jogo completo.
-- `peer-transport.js`: coordenação de salas 1–4 jogadores sobre WebRTC.
-- `server.js`, `ws-lite.js`: servidor WebSocket opcional para hospedagem Node.
-- `test/`: testes de progressão, multiplayer Node e multiplayer WebRTC simulado.
-
-Os sons e as três faixas inclusas são originais deste projeto.
+O código-fonte local completo da versão anterior (com servidor Node opcional e testes) também está disponível no pacote de desenvolvimento entregue na conversa.
