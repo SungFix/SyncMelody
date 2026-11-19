@@ -68,3 +68,11 @@ O site público contém **apenas o código e a partitura**; os MP3s não são di
 Na página inicial, escolha os arquivos nos campos **Guitarra**, **Bateria** e **Baixo**; também é possível selecionar os três juntos no campo opcional. O nome do arquivo não importa quando você seleciona cada instrumento individualmente. A mensagem abaixo mostra um ✓ para cada arquivo reconhecido. Só depois dos três itens marcados inicie **Rock do seu MP3**. Não use o arquivo original `musicqa.mp3` como substituto de uma das faixas.
 
 O modo de música importada reproduz os três arquivos no tempo original, mas com volume 0 até o acerto. Nos quatro instrumentos de jogo, o contrabaixo compartilha o áudio da faixa de baixo. O repositório público não inclui os MP3s por respeito aos direitos de distribuição.
+
+## Correção da reprodução por acerto
+
+- O player não reproduz mais nenhuma gravação automaticamente; um acerto válido emite somente o trecho do MP3 do instrumento naquela posição da música.
+- Acertos antecipados esperam a nota, e atrasados usam o ponto atualizado da gravação; transições têm fade-in e fade-out.
+- O modo livre, as quatro músicas originais e as salas continuam disponíveis.
+- Os MP3s não são publicados no repositório. Eles são carregados no navegador pelo jogador, ou automaticamente quando estão na pasta local `stems/`.
+- A separação original é aproximada (filtragem espectral), não uma extração por IA; a qualidade dos instrumentos ainda tem limitações.

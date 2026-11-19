@@ -1,7 +1,7 @@
 import {createPeerTransport} from './peer-transport.js';
 import {instruments, songs, createChart, instrumentLayouts, keyLabel} from './music.js';
 import {SampleAudioEngine} from './sample-audio.js';
-import {StemPlayer, STEM_LABELS, STEM_PARTS} from './stem-player.js?v=2';
+import {StemPlayer, STEM_LABELS, STEM_PARTS} from './stem-player.js?v=4';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -53,11 +53,20 @@ async function importStemFiles(files,part=null){
   const status=$('#local-mp3-status');
   try{
     const stems=await getStems();
-    status.textContent='Lendo e sincronizando seus áudios. Não feche a página…';
+    status.textContent='Lendo as gravações. Isso pode levar alguns segundos…';
+    await new Promise(resolve=>requestAnimationFrame(resolve));
     if(part){
       if(files.length!==1)throw new Error('Selecione um arquivo MP3 para esse instrumento.');
       await stems.setFile(part,files[0]);
-    }else await stems.setFiles(files);
+    }else {
+      for(const file of files){
+        const matching=/guitarra|guitar/i.test(file.name)?'guitar':/bateria|drums?|percuss/i.test(file.name)?'drums':/baixo|bass/i.test(file.name)?'bass':null;
+        if(!matching)throw new Error('Nome não identificado: '+file.name+'. Use os campos individuais de guitarra, bateria e baixo.');
+        status.textContent='Carregando '+STEM_LABELS[matching]+'…';
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+        await stems.setFile(matching,file);
+      }
+    }
     updateStemStatus();
     if(!room||isHost()){
       selectedSong='arquivo-rock';renderSongs();
@@ -285,6 +294,7 @@ $('#sound-toggle').addEventListener('click',()=>{
 $('#back-to-lobby').addEventListener('click',()=>{exitGame();renderRoom();});
 
 function beginGame({online,startAt,songId}){
+  if(songId==='arquivo-rock'&&!stemPlayer?.ready()){toast('Escolha as 3 faixas antes de iniciar esta música.');return;}
   if(gameSession){stopGame();}
   const chart=createChart(songId);
   const part=online?(ownPlayer()?.instrument||selectedInstrument):selectedInstrument;
