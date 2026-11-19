@@ -50,3 +50,19 @@ Acesse `http://localhost:8000/`. O modo solo não depende do PeerJS Cloud.
 - `peer-transport.js`: conexão entre até quatro navegadores
 
 O código-fonte local completo da versão anterior (com servidor Node opcional e testes) também está disponível no pacote de desenvolvimento entregue na conversa.
+
+## Rock Edition — repertório
+
+| Música original | Estilo | Dificuldade | BPM |
+|---|---|---|---|
+| Fogo na Garagem | Grunge rock | Média | 108 |
+| Marcha de Aço | Thrash metal | Alta | 156 |
+| Ecos do Asfalto | Rock alternativo | Fácil | 92 |
+| Céu em Ruínas | Hard rock | Média | 124 |
+
+- **Guitarra:** riffs, power chords e distorção sintetizada.
+- **Bateria:** bumbo, caixa, chimbal e prato/tom.
+- **Baixo elétrico:** ataque de palheta e médio-graves.
+- **Contrabaixo acústico:** pizzicato mais suave e profundo.
+
+As quatro partes formam um arranjo simultâneo. Se alguém não escolher um instrumento, a parte é tocada automaticamente. Os sons vêm da Web Audio API e são aproximações sintetizadas dos instrumentos, não gravações reais.
