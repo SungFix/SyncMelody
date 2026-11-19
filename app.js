@@ -190,7 +190,7 @@ $('#start-btn').addEventListener('click',async()=>{
 });
 
 $('#free-solo-btn').addEventListener('click',async()=>{
-  try{await audio.unlock();await audio.prepare(selectedInstrument);startFree({online:false});}
+  try{await audio.unlock();toast('Carregando o som real do instrumento…');await audio.prepare(selectedInstrument);startFree({online:false});}
   catch(e){toast(e.message);}
 });
 $('#start-free-btn').addEventListener('click',async()=>{
@@ -201,7 +201,7 @@ $('#start-free-btn').addEventListener('click',async()=>{
 $('#free-instrument-select').addEventListener('change',async e=>{
   if(gameSession?.mode!=='free'||gameSession.online)return;
   const next=e.target.value;if(!INSTRUMENT_IDS.includes(next))return;
-  try{await audio.prepare(next);selectedInstrument=next;gameSession.part=next;renderFreeControls();renderBand();}
+  try{await audio.prepare(next);selectedInstrument=next;gameSession.part=next;renderFreeControls();renderBand();e.target.blur();}
   catch(error){toast(error.message);e.target.value=gameSession.part;}
 });
 
@@ -326,7 +326,7 @@ function renderBand(){
   $('#band-count').textContent=`${members.length} / 4`;
   ui.gamePlayers.innerHTML=INSTRUMENT_IDS.map(id=>{
     const i=instrument(id),p=members.find(m=>m.instrument===id);
-    return `<div class="band-member ${p?'':'empty'}"><span class="band-member-icon">${i.emoji}</span><span class="band-member-text"><strong>${p?escapeHtml(p.name):'Instrumento automático'}</strong><small>${i.name}${p?.id===selfId||(!g.online&&p)?' · VOCÊ':''}</small></span><span class="band-member-points">${p?Number(p.score||0).toLocaleString('pt-BR'):'AUTO'}</span></div>`;
+    return `<div class="band-member ${p?'':'empty'}"><span class="band-member-icon">${i.emoji}</span><span class="band-member-text"><strong>${p?escapeHtml(p.name):(g.mode==='free'?'Vaga livre':'Instrumento automático')}</strong><small>${i.name}${p?.id===selfId||(!g.online&&p)?' · VOCÊ':''}</small></span><span class="band-member-points">${p?(g.mode==='free'?'TOCANDO':Number(p.score||0).toLocaleString('pt-BR')):(g.mode==='free'?'LIVRE':'AUTO')}</span></div>`;
   }).join('');
 }
 function scheduleBacking(g,elapsed){

@@ -17,7 +17,7 @@ export const instrumentLayouts = {
     names:['Mi grave','Lá','Ré','Sol','Si','Mi agudo']},
   drums: {keys:['KeyA','KeyS','KeyD','KeyF','KeyJ','KeyK','KeyL','Semicolon'], notes:[36,38,42,46,45,51,41,49],
     names:['Bumbo','Caixa','Chimbal fechado','Chimbal aberto','Tom alto','Prato ride','Tom grave','Crash']},
-  bass: {keys:['KeyA','KeyS','KeyD','KeyJ','KeyK'], notes:[35,40,45,50,55],
+  bass: {keys:['KeyA','KeyS','KeyD','KeyJ','KeyK'], notes:[23,28,33,38,43],
     names:['Si grave','Mi','Lá','Ré','Sol']},
   contrabass: {keys:['KeyA','KeyS','KeyJ','KeyK'], notes:[28,33,38,43],
     names:['Mi','Lá','Ré','Sol']}
