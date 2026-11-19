@@ -14,8 +14,8 @@ const ui = {
 };
 const params = new URLSearchParams(location.search);
 const invite = (params.get('room') || '').replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6);
-let selectedInstrument='keys';
-let selectedSong='neon-rush';
+let selectedInstrument='guitar';
+let selectedSong='fogo-na-garagem';
 let socket=null, peerTransport=null, selfId=null, room=null, reconnecting=false, pendingCreateSong=null;
 let serverOffset=0, pingSent=0, noticeTimeout=null, gameSession=null, raf=0, soundMuted=false;
 const KEY_LANES={KeyD:0,KeyF:1,KeyJ:2,KeyK:3,ArrowLeft:0,ArrowDown:1,ArrowUp:2,ArrowRight:3};
@@ -23,7 +23,7 @@ const LANE_COLORS=['#d5ff6a','#ffabd8','#a4baff','#ffd084'];
 const INSTRUMENT_IDS=instruments.map(i=>i.id);
 
 class AudioEngine {
-  constructor(){this.ctx=null;this.master=null;this.noise=null;this.muted=false;}
+  constructor(){this.ctx=null;this.master=null;this.noise=null;this.muted=false;this.guitarCurve=null;}
   async unlock(){
     if(!this.ctx){
       const Context=window.AudioContext || window.webkitAudioContext;
@@ -75,17 +75,45 @@ class AudioEngine {
   play(part,note,when=null,velocity=1){
     if(!this.ctx||this.ctx.state!=='running')return;
     const c=this.ctx,t=Math.max(c.currentTime+.002,when??c.currentTime),freq=440*Math.pow(2,(note.pitch-69)/12),v=velocity;
-    if(part==='keys'){
-      this.tone(freq,t,.56,'triangle',.14*v,2800);
-      this.tone(freq*2,t,.38,'sine',.032*v);
-      this.tone(freq*3,t,.21,'sine',.014*v);
+    if(part==='guitar'){
+      // Power chords e riffs com distorção, filtro de amplificador e palm mute.
+      const duration=note.muted?.14:note.chord?.48:.28;
+      const amp=c.createGain(), highpass=c.createBiquadFilter(), lowpass=c.createBiquadFilter();
+      const shaper=c.createWaveShaper();
+      highpass.type='highpass';highpass.frequency.value=105;
+      lowpass.type='lowpass';lowpass.frequency.value=3300;
+      if(!this.guitarCurve){
+        const drive=65, curve=new Float32Array(2048);
+        for(let i=0;i<curve.length;i++){
+          const x=i*2/(curve.length-1)-1;
+          curve[i]=(3+drive)*x*20*(Math.PI/180)/(Math.PI+drive*Math.abs(x));
+        }
+        this.guitarCurve=curve;
+      }
+      shaper.curve=this.guitarCurve;shaper.oversample='2x';
+      amp.gain.setValueAtTime(.0001,t);
+      amp.gain.exponentialRampToValueAtTime((note.chord?.095:.115)*v,t+.009);
+      amp.gain.exponentialRampToValueAtTime(.0001,t+duration);
+      highpass.connect(shaper);shaper.connect(lowpass);lowpass.connect(amp);amp.connect(this.master);
+      const offsets=note.chord?[0,7,12]:[0];
+      offsets.forEach((semitones,i)=>{
+        const voice=c.createOscillator();voice.type=i%2===0?'sawtooth':'triangle';
+        voice.frequency.value=freq*Math.pow(2,semitones/12);
+        voice.detune.value=i===1?3:i===2?-3:0;
+        voice.connect(highpass);voice.start(t);voice.stop(t+duration+.025);
+      });
+      this.hiss(t,.035,(note.muted?.012:.018)*v,2300);
     } else if(part==='bass'){
-      this.tone(freq,t,.43,'sawtooth',.15*v,400);
-      this.tone(freq*.5,t,.46,'sine',.13*v);
-    } else if(part==='lead'){
-      this.tone(freq,t,.25,'square',.075*v,1800);
-      this.tone(freq,t,.28,'sawtooth',.09*v,2100,7);
-      this.tone(freq*2,t,.16,'sine',.032*v);
+      // Baixo elétrico: ataque com palheta e grave definido.
+      this.tone(freq,t,.36,'sawtooth',.105*v,750);
+      this.tone(freq,t,.42,'triangle',.11*v,450);
+      this.hiss(t,.026,.011*v,1800);
+    } else if(part==='contrabass'){
+      // Contrabaixo acústico: pizzicato com harmônicos curtos.
+      this.tone(freq,t,.62,'sine',.22*v,450);
+      this.tone(freq*2,t,.34,'triangle',.058*v,660);
+      this.tone(freq*3,t,.18,'sine',.017*v,900);
+      this.hiss(t,.035,.008*v,1400);
     } else if(part==='drums'){
       if(note.lane===0){
         const osc=c.createOscillator(),g=c.createGain();osc.type='sine';
@@ -94,7 +122,7 @@ class AudioEngine {
         osc.connect(g);g.connect(this.master);osc.start(t);osc.stop(t+.24);
       } else if(note.lane===1){this.hiss(t,.19,.20*v,1100);this.tone(175,t,.14,'triangle',.06*v);}
       else if(note.lane===2){this.hiss(t,.09,.065*v,6500);}
-      else {this.tone(140,t,.18,'triangle',.17*v);this.hiss(t,.09,.045*v,3000);}
+      else {this.tone(140,t,.18,'triangle',.17*v);this.hiss(t,.20,.07*v,3000);}
     }
   }
 }
@@ -112,7 +140,7 @@ function ownPlayer(){return room?.players?.find(p=>p.id===selfId);}
 
 function renderSongs(){
   ui.songList.innerHTML=songs.map(s=>`<button type="button" class="song-item ${s.id===selectedSong?'active':''}" data-song="${s.id}" aria-pressed="${s.id===selectedSong}" ${room&&!isHost()?'disabled':''}>
-    <span class="song-cover" aria-hidden="true">${s.id==='neon-rush'?'♫':s.id==='pixel-parade'?'✳':'☾'}</span>
+    <span class="song-cover" aria-hidden="true">${({'fogo-na-garagem':'⚡','marcha-de-aco':'✳','ecos-do-asfalto':'☾','ceu-em-ruinas':'★'})[s.id] || '♫'}</span>
     <span class="song-text"><strong>${s.name}</strong><small>${s.genre} · ${s.bpm} BPM</small></span>
     <span class="song-difficulty" title="Dificuldade ${s.difficulty} de 3">${[1,2,3].map(i=>`<span class="${i<=s.difficulty?'filled':''}"></span>`).join('')}</span>
   </button>`).join('');
