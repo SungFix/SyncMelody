@@ -54,7 +54,7 @@ Na faixa **Rock do seu MP3** há **três gravações de aproximadamente 5:40**, 
 | Baixo elétrico | `musicqa-baixo-PREVIA.mp3` | D F J K |
 | Contrabaixo | a MESMA faixa do baixo (não foi entregue uma quarta gravação) | D F J K |
 
-**Sem áudio automático:** as três faixas iniciam sincronizadas, mas completamente mudas. Um acerto no ritmo abre brevemente o volume do **instrumento correspondente**; uma nota errada ou não pressionada não libera som. Com vários acertos seguidos, a música pode soar mais contínua; sem acertos, ela fica muda. O áudio permanece na posição correta da gravação e nunca é substituído por amostras MIDI nesta faixa.
+**Áudio contínuo condicionado aos acertos:** as faixas iniciam sincronizadas e inaudíveis. Um acerto abre suavemente o volume do instrumento; acertos seguintes mantêm o som fluindo, sem cortes. Uma nota perdida faz o áudio desaparecer gradualmente. Sem acertos, não há som audível, e nenhum arquivo original é modificado ou substituído.
 
 **Como usar no GitHub Pages:** baixe o pacote das três prévias, extraia, clique no campo **Carregar guitarra, bateria e baixo (3 MP3)** e selecione os três arquivos (juntos ou um por vez). Cada participante precisa importar suas próprias cópias; os arquivos não são transmitidos para o servidor. No ZIP completo, os arquivos estão também dentro de `stems/`, e podem ser carregados automaticamente caso você use `npm start` no computador.
 
@@ -71,8 +71,8 @@ O modo de música importada reproduz os três arquivos no tempo original, mas co
 
 ## Correção da reprodução por acerto
 
-- O player não reproduz mais nenhuma gravação automaticamente; um acerto válido emite somente o trecho do MP3 do instrumento naquela posição da música.
-- Acertos antecipados esperam a nota, e atrasados usam o ponto atualizado da gravação; transições têm fade-in e fade-out.
+- Cada instrumento mantém uma única reprodução silenciosa e sincronizada desde o início da música. Não se criam trechos novos para cada nota.
+- Acertos antecipados aguardam o tempo correto e os atrasados entram no ponto atualizado da gravação; erros fazem uma saída suave, sem cortes secos.
 - O modo livre, as quatro músicas originais e as salas continuam disponíveis.
 - Os MP3s não são publicados no repositório. Eles são carregados no navegador pelo jogador, ou automaticamente quando estão na pasta local `stems/`.
 - A separação original é aproximada (filtragem espectral), não uma extração por IA; a qualidade dos instrumentos ainda tem limitações.
