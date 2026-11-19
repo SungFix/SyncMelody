@@ -7,6 +7,7 @@ class Param {
   cancelAndHoldAtTime(t){this.events.push(['hold',t]);}
   setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);}
   linearRampToValueAtTime(v,t){this.value=v;this.events.push(['ramp',v,t]);}
+  setTargetAtTime(v,t,tau){this.events.push(['target',v,t,tau]);}
 }
 class Gain {constructor(){this.gain=new Param();}connect(x){this.to=x;}disconnect(){this.to=null;}}
 class Source {constructor(){this.onended=null;this.started=false;this.stopped=false;}
@@ -27,35 +28,56 @@ await test('nomes originais e mapa de controles preservados',()=>{
   assert.equal(Object.keys(STEM_FILENAMES).length,3);
 });
 
-await test('sem acerto nao existe source de audio, acerto emite somente o trecho correto',async()=>{
+
+await test('trilhas sincronizadas começam mudas sem nenhum acerto',async()=>{
   const ctx=new Ctx(),player=new StemPlayer(ctx,{});
-  for(const part of ['guitar','drums','bass'])
-    await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
+  for(const part of ['guitar','drums','bass'])await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
   player.start(3.5);
-  assert.equal(ctx.sources.length,0);
-  assert.equal(player.hit('unknown',{t:4},[]),false);
-  assert.equal(ctx.sources.length,0);
-  ctx.currentTime=17.5;
-  const note={t:4,lane:0};
-  assert.equal(player.hit('guitar',note,[note,{t:4.5}]),true);
-  assert.equal(ctx.sources.length,1);
-  assert.equal(ctx.sources[0].buffer,player.buffers.get('guitar'));
-  assert.ok(Math.abs(ctx.sources[0].started[1]-4.006)<.003);
-  assert.ok(ctx.sources[0].started[2]>.1);
-  assert.equal(player.hit('guitar',note,[note]),false);
-  player.stop();assert.equal(ctx.sources[0].stopped,true);
+  assert.equal(ctx.sources.length,4);
+  assert.ok(ctx.sources.every(src=>src.started[0]===13.5&&src.started[1]===0));
+  assert.ok(ctx.gains.every(g=>g.gain.events.every(e=>e[0]==='set'&&e[1]===0)));
+  assert.equal(ctx.sources[3].buffer,player.buffers.get('bass'));
+  player.stop();assert.ok(ctx.sources.every(s=>s.stopped));
 });
-await test('acertos adiantados e atrasados preservam a linha temporal',async()=>{
+await test('acertos consecutivos mantêm a mesma reprodução, sem cortar o MP3',async()=>{
   const ctx=new Ctx(),player=new StemPlayer(ctx,{});
-  for(const part of ['guitar','drums','bass'])
-    await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
-  player.start(3.5);
-  ctx.currentTime=15.4;
-  assert.equal(player.hit('bass',{t:2},[{t:2}]),true);
-  assert.ok(Math.abs(ctx.sources[0].started[0]-15.5)<1e-8);
-  ctx.currentTime=17.6;
-  assert.equal(player.hit('drums',{t:4},[{t:4}]),true);
-  assert.ok(Math.abs(ctx.sources[1].started[1]-4.106)<.003);
+  for(const part of ['guitar','drums','bass'])await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
+  player.start(0);
+  ctx.currentTime=14;
+  assert.equal(player.hit('guitar',{t:4}),true);
+  assert.equal(player.hit('guitar',{t:4}),false);
+  ctx.currentTime=14.45;
+  assert.equal(player.hit('guitar',{t:4.4}),true);
+  assert.equal(ctx.sources.length,4);
+  const param=player.tracks.get('guitar').envelope.gain;
+  assert.equal(param.events.filter(e=>e[0]==='hold').length,2);
+  assert.equal(param.events.filter(e=>e[0]==='target'&&e[1]>0).length,2);
+  assert.ok(ctx.gains.filter(g=>g.gain.events.some(e=>e[0]==='target'&&e[1]>0)).length===1);
+});
+await test('um erro faz fade suave e o acerto posterior restaura o audio',async()=>{
+  const ctx=new Ctx(),player=new StemPlayer(ctx,{});
+  for(const part of ['guitar','drums','bass'])await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
+  player.start(0);
+  ctx.currentTime=12;
+  player.hit('bass',{t:2});
+  ctx.currentTime=12.6;
+  assert.equal(player.miss('bass',{t:2.5}),true);
+  let param=player.tracks.get('bass').envelope.gain;
+  assert.deepEqual(param.events.at(-1).slice(0,2),['target',0]);
+  ctx.currentTime=13.1;
+  assert.equal(player.hit('bass',{t:3}),true);
+  assert.equal(ctx.sources.length,4);
+  assert.ok(param.events.at(-2)[1]>.5);
+  player.stop();
+});
+await test('evento tardio não desloca a linha do tempo',async()=>{
+  const ctx=new Ctx(),player=new StemPlayer(ctx,{});
+  for(const part of ['guitar','drums','bass'])await player.setFile(part,{size:1024,arrayBuffer:async()=>new ArrayBuffer(8)});
+  player.start(-3);
+  assert.ok(ctx.sources.every(s=>Math.abs(s.started[1]-3.01)<.001));
+  ctx.currentTime=10.5;
+  assert.equal(player.hit('drums',{t:3.4}),true);
+  assert.equal(ctx.sources.length,4);
 });
 await test('não aceita gravação com duração diferente',async()=>{
   const ctx=new Ctx();ctx.decodeAudioData=async()=>({duration:120});

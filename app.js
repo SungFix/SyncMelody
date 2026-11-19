@@ -1,7 +1,7 @@
 import {createPeerTransport} from './peer-transport.js';
 import {instruments, songs, createChart, instrumentLayouts, keyLabel} from './music.js';
 import {SampleAudioEngine} from './sample-audio.js';
-import {StemPlayer, STEM_LABELS, STEM_PARTS} from './stem-player.js?v=4';
+import {StemPlayer, STEM_LABELS, STEM_PARTS} from './stem-player.js?v=continuous5';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -430,6 +430,7 @@ function updateMissed(g,elapsed){
     const note=g.notes[g.nextMiss++];
     if(g.hit.has(note.index))continue;
     g.hit.add(note.index);g.combo=0;g.miss++;
+    if(g.chart.song.id==='arquivo-rock')stemPlayer?.miss(g.part,note);
     showJudge('MISS');
     if(g.online)socketSend({type:'score',score:g.score,combo:g.combo});
     updateScore();

@@ -1,6 +1,6 @@
 /**
- * Player das faixas importadas do usuário: conserva o AudioBuffer de cada MP3
- * integral, no tempo original; os ganhos ficam zerados até acertos válidos.
+ * Player de musica continua: fontes sincronizadas na gravacao original, com ganhos
+ * em silencio ate o primeiro acerto e fades suaves entre erros/acertos.
  * Nenhuma amostra é sintetizada ou substituída neste modo.
  */
 export const STEM_FILENAMES = Object.freeze({
@@ -11,7 +11,7 @@ export const STEM_FILENAMES = Object.freeze({
 export const STEM_PARTS = Object.freeze(['guitar','drums','bass']);
 export const STEM_LABELS = Object.freeze({guitar:'Guitarra',drums:'Bateria',bass:'Baixo'});
 const PART_TO_STEM = Object.freeze({guitar:'guitar',drums:'drums',bass:'bass',contrabass:'bass'});
-const DEFAULT_GATE = Object.freeze({guitar:.61,drums:.25,bass:.48,contrabass:.56});
+const DEFAULT_GATE = Object.freeze({guitar:2.6,drums:2.6,bass:2.6,contrabass:2.6});
 const LEVELS = Object.freeze({guitar:.96,drums:1,bass:.9,contrabass:.70});
 
 export function identifyStem(filename){
@@ -36,7 +36,7 @@ export function nextGateDuration(part, note, samePartNotes=[]){
 export class StemPlayer {
   constructor(ctx,destination){
     this.ctx=ctx;this.destination=destination;
-    this.buffers=new Map();this.active=new Set();this.lastHits=new Map();
+    this.buffers=new Map();this.tracks=new Map();this.lastHits=new Map();
     this.started=false;this.origin=0;this.loadJobs=new Map();
   }
   ready(){return STEM_PARTS.every(p=>this.buffers.has(p));}
@@ -75,51 +75,74 @@ export class StemPlayer {
     }
     return this.ready();
   }
+
   start(secondsToStart){
     this.stop();
     if(!this.ready())throw Error('Carregue guitarra, bateria e baixo para tocar a música.');
-    this.origin=this.ctx.currentTime+secondsToStart;
-    this.started=true;
+    const now=this.ctx.currentTime;
+    this.origin=now+Number(secondsToStart||0);
+    try{
+      // Uma fonte para cada um dos quatro instrumentos: reproduz o MP3 inteiro,
+      // no tempo original, mas em SILENCIO ate um acerto correto.
+      for(const [part,stem] of Object.entries(PART_TO_STEM)){
+        const buffer=this.buffers.get(stem);
+        const when=Math.max(this.origin,now+.01);
+        const offset=Math.max(0,when-this.origin);
+        if(offset>=buffer.duration)continue;
+        const source=this.ctx.createBufferSource();
+        const envelope=this.ctx.createGain();
+        source.buffer=buffer;
+        envelope.gain.setValueAtTime(0,now);
+        source.connect(envelope);envelope.connect(this.destination);
+        const track={source,envelope,part};
+        this.tracks.set(part,track);
+        source.onended=()=>{
+          if(this.tracks.get(part)===track)this.tracks.delete(part);
+          try{source.disconnect();envelope.disconnect();}catch{}
+        };
+        source.start(when,offset);
+      }
+      this.started=true;
+    }catch(error){this.stop();throw error;}
   }
-  hit(part,note,partNotes=[]){
+  hit(part,note){
     if(!this.started||!note||!Object.hasOwn(PART_TO_STEM,part))return false;
-    const buffer=this.buffers.get(PART_TO_STEM[part]);
-    if(!buffer||!Number.isFinite(note.t)||note.t<0)return false;
+    const track=this.tracks.get(part),buffer=this.buffers.get(PART_TO_STEM[part]);
+    if(!track||!buffer||!Number.isFinite(note.t)||note.t<0)return false;
     const prior=this.lastHits.get(part);
     if(prior!==undefined&&Math.abs(prior-note.t)<.055)return false;
-    const t=this.ctx.currentTime;
-    const target=this.origin+note.t;
-    const when=Math.max(t+.006,target);
-    const offset=when-this.origin;
-    if(offset>=buffer.duration||offset<0)return false;
-    const base=nextGateDuration(part,note,partNotes);
-    const late=Math.max(0,when-target);
-    const duration=Math.min(buffer.duration-offset,Math.max(.085,base-late));
-    if(duration<=.018)return false;
-    const source=this.ctx.createBufferSource();
-    const envelope=this.ctx.createGain();
-    source.buffer=buffer;
-    const level=LEVELS[part];
-    const attack=Math.min(.012,duration*.15);
-    const release=Math.min(part==='drums'?.045:.075,duration*.24);
-    envelope.gain.setValueAtTime(0,when);
-    envelope.gain.linearRampToValueAtTime(level,when+attack);
-    envelope.gain.setValueAtTime(level,when+Math.max(attack,duration-release));
-    envelope.gain.linearRampToValueAtTime(0,when+duration);
-    source.connect(envelope);envelope.connect(this.destination);
-    const voice={source,envelope};this.active.add(voice);
-    source.onended=()=>{this.active.delete(voice);try{source.disconnect();envelope.disconnect();}catch{}};
-    try{source.start(when,offset,duration);}catch(err){
-      this.active.delete(voice);source.disconnect();envelope.disconnect();throw err;
-    }
+    const when=Math.max(this.ctx.currentTime+.006,this.origin+note.t);
+    if(when-this.origin<0||when-this.origin>=buffer.duration)return false;
+    const gain=track.envelope.gain;
+    // Mantem a amplitude atual: sem cliques e sem reinicio entre notas.
+    if(typeof gain.cancelAndHoldAtTime==='function')gain.cancelAndHoldAtTime(when);
+    else {gain.cancelScheduledValues(when);gain.setValueAtTime(gain.value,when);}
+    gain.setTargetAtTime(LEVELS[part],when,.028);
+    // Acertos consecutivos cancelam o fade programado e prolongam o riff.
+    // Somente apos 2,6 segundos sem acerto ocorre uma saida suave.
+    gain.setTargetAtTime(0,Math.min(this.origin+buffer.duration,when+2.6),.27);
     this.lastHits.set(part,note.t);
     return true;
   }
+  miss(part,note){
+    if(!this.started||!Object.hasOwn(PART_TO_STEM,part))return false;
+    const track=this.tracks.get(part);
+    if(!track)return false;
+    const last=this.lastHits.get(part);
+    // Um acerto em um acorde nao deve ser anulado por uma nota simultanea perdida.
+    if(Number.isFinite(note?.t)&&last!==undefined&&note.t<=last+.055)return false;
+    const when=this.ctx.currentTime+.006;
+    const gain=track.envelope.gain;
+    if(typeof gain.cancelAndHoldAtTime==='function')gain.cancelAndHoldAtTime(when);
+    else {gain.cancelScheduledValues(when);gain.setValueAtTime(gain.value,when);}
+    gain.setTargetAtTime(0,when,.15);
+    return true;
+  }
   stop(){
-    for(const {source,envelope} of this.active){
+    for(const {source,envelope} of this.tracks.values()){
       try{source.stop();}catch{}
       try{source.disconnect();envelope.disconnect();}catch{}
     }
-    this.active.clear();this.lastHits.clear();this.started=false;
+    this.tracks.clear();this.lastHits.clear();this.started=false;
   }
 }

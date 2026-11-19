@@ -76,3 +76,8 @@ O modo de música importada reproduz os três arquivos no tempo original, mas co
 - O modo livre, as quatro músicas originais e as salas continuam disponíveis.
 - Os MP3s não são publicados no repositório. Eles são carregados no navegador pelo jogador, ou automaticamente quando estão na pasta local `stems/`.
 - A separação original é aproximada (filtragem espectral), não uma extração por IA; a qualidade dos instrumentos ainda tem limitações.
+
+
+## Reprodução fluida (correção de cortes)
+
+As mesmas três faixas MP3 originais continuam inalteradas. No modo de música importada, cada instrumento mantém uma reprodução inteira, sincronizada e inicialmente muda. Um acerto abre o volume com fade de 28 ms; acertos seguintes mantêm a música fluindo, sem reiniciar ou recortar o MP3. Uma nota perdida reduz gradualmente o volume; após 2,6 s sem novos acertos, o instrumento desvanece. Sem acertos, não há som audível. Os MP3s não são publicados no GitHub público.
