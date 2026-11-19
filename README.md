@@ -41,3 +41,13 @@ npm start
 ```
 
 Acesse http://localhost:3000. O servidor local WebSocket inclui o suporte a salas e ensaio livre; o site publicado no Pages usa WebRTC.
+
+
+## Sua música (mapa aproximado)
+
+- A nova faixa **Rock do seu MP3 (5:40)** usa um mapa aproximado dos ataques rítmicos da gravação fornecida. A gravação não está embutida no repositório.
+- Controles: **bateria D F J K** (4), **guitarra F J** (2), **baixo D F J K** (4), **contrabaixo D F J K** (4), também no modo livre.
+- Antes de começar, **cada jogador seleciona a própria cópia** do MP3 original ou com voz atenuada no navegador. O arquivo não é enviado ao GitHub nem aos outros jogadores.
+- A base do MP3 é agendada no Web Audio; a partitura é **estimada**, não uma transcrição perfeita nota a nota. O contrabaixo é uma linha tocável adicional, não um stem isolado da música.
+- A versão com voz atenuada é uma **aproximação por atenuação do centro do estéreo**, que pode reduzir outros instrumentos centrais. Não é extração vocal por IA.
+- Não publique gravações de terceiros sem os direitos necessários.

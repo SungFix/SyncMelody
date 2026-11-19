@@ -20,6 +20,7 @@ let selectedSong='fogo-na-garagem';
 let socket=null, peerTransport=null, selfId=null, room=null, reconnecting=false, pendingCreateSong=null;
 let serverOffset=0, pingSent=0, noticeTimeout=null, gameSession=null, raf=0, soundMuted=false;
 let freeKeyCount=0;
+let importedAudio=null, backingSource=null;
 const currentLayout=()=>instrumentLayouts[gameSession?.part||selectedInstrument];
 const laneForCode=code=>currentLayout().keys.indexOf(code);
 const LANE_COLORS=['#d5ff6a','#ffabd8','#a4baff','#ffd084'];
@@ -39,7 +40,7 @@ function ownPlayer(){return room?.players?.find(p=>p.id===selfId);}
 
 function renderSongs(){
   ui.songList.innerHTML=songs.map(s=>`<button type="button" class="song-item ${s.id===selectedSong?'active':''}" data-song="${s.id}" aria-pressed="${s.id===selectedSong}" ${room&&!isHost()?'disabled':''}>
-    <span class="song-cover" aria-hidden="true">${({'fogo-na-garagem':'⚡','marcha-de-aco':'✳','ecos-do-asfalto':'☾','ceu-em-ruinas':'★'})[s.id] || '♫'}</span>
+    <span class="song-cover" aria-hidden="true">${({'fogo-na-garagem':'⚡','marcha-de-aco':'✳','ecos-do-asfalto':'☾','ceu-em-ruinas':'★','arquivo-rock':'🎧'})[s.id] || '♫'}</span>
     <span class="song-text"><strong>${s.name}</strong><small>${s.genre} · ${s.bpm} BPM</small></span>
     <span class="song-difficulty" title="Dificuldade ${s.difficulty} de 3">${[1,2,3].map(i=>`<span class="${i<=s.difficulty?'filled':''}"></span>`).join('')}</span>
   </button>`).join('');
@@ -165,12 +166,35 @@ ui.instrumentOptions.addEventListener('click',e=>{
   if(room)socketSend({type:'instrument',instrument:selectedInstrument});
 });
 ui.nickname.addEventListener('change',()=>{if(room)socketSend({type:'name',name:cleanName()});});
+$('#local-mp3').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];if(!file)return;
+  if(file.size>70*1024*1024){toast('Escolha um MP3 com até 70 MB.');return;}
+  const status=$('#local-mp3-status');
+  try{
+    status.textContent='Lendo áudio e preparando a sincronização…';status.classList.remove('ready');
+    await audio.unlock();
+    const buffer=await audio.ctx.decodeAudioData(await file.arrayBuffer());
+    if(Math.abs(buffer.duration-340.24)>3){
+      status.textContent='Esse mapa de notas foi feito para a música enviada (5:40). Selecione essa gravação, original ou com voz atenuada.';
+      return;
+    }
+    importedAudio=buffer;
+    status.textContent=`✓ ${file.name} carregado (${formatTime(buffer.duration)}). Só fica neste navegador.`;
+    status.classList.add('ready');
+    if(!room||isHost()){
+      selectedSong='arquivo-rock';renderSongs();
+      if(room)socketSend({type:'song',songId:selectedSong});
+    }
+    toast('MP3 pronto! Escolha seu instrumento e inicie o jogo.');
+  }catch(error){status.textContent='Não foi possível abrir este MP3 neste navegador.';toast(error.message);}
+});
 $('#toggle-join-btn').addEventListener('click',()=>{ui.joinForm.hidden=!ui.joinForm.hidden;if(!ui.joinForm.hidden)ui.roomCodeInput.focus();});
 if(invite){ui.joinForm.hidden=false;ui.roomCodeInput.value=invite;}
 ui.roomCodeInput.addEventListener('input',()=>{ui.roomCodeInput.value=ui.roomCodeInput.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,6);});
 ui.roomCodeInput.addEventListener('keydown',e=>{if(e.key==='Enter')$('#join-btn').click();});
 $('#solo-btn').addEventListener('click',async()=>{
-  try{await audio.unlock();toast('Carregando amostras reais da banda…');await audio.prepareAll();beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
+  if(selectedSong==='arquivo-rock'&&!importedAudio){toast('Carregue o MP3 de 5:40 acima para jogar esta música.');return;}
+  try{await audio.unlock();if(selectedSong==='arquivo-rock'){audio.prepareAll().catch(e=>toast(e.message));}else{toast('Carregando amostras reais da banda…');await audio.prepareAll();}beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
   catch(e){toast(e.message);}
 });
 $('#create-btn').addEventListener('click',async()=>{
@@ -185,6 +209,7 @@ $('#join-btn').addEventListener('click',async()=>{
 });
 $('#start-btn').addEventListener('click',async()=>{
   if(!isHost())return;
+  if(selectedSong==='arquivo-rock'&&!importedAudio){toast('Carregue seu MP3 antes de iniciar a música.');return;}
   try{await audio.unlock();socketSend({type:'start',mode:'rhythm'});}
   catch(e){toast(e.message);}
 });
@@ -245,7 +270,25 @@ function beginGame({online,startAt,songId}){
   ui.progressFill.style.width='0%';
   ui.progressTime.textContent=`00:00 / ${formatTime(chart.duration)}`;
   audio.stopAll();
+  startImportedBacking(songId,startAt,online);
   requestAnimationFrame(()=>{resizeCanvas();drawFrame();});
+}
+function stopBacking(){
+  if(backingSource){try{backingSource.stop();}catch{}backingSource.disconnect();backingSource=null;}
+}
+function startImportedBacking(songId,startAt,online){
+  stopBacking();
+  if(songId!=='arquivo-rock')return;
+  if(!importedAudio||!audio.ctx){toast('Falta carregar o MP3 neste navegador antes de tocar.');return;}
+  const seconds=(startAt-(Date.now()+(online?serverOffset:0)))/1000;
+  const offset=Math.max(0,-seconds);
+  if(offset>=importedAudio.duration)return;
+  const src=audio.ctx.createBufferSource(),gain=audio.ctx.createGain();
+  src.buffer=importedAudio;gain.gain.value=.72;
+  src.connect(gain);gain.connect(audio.master);
+  src.start(audio.ctx.currentTime+Math.max(.005,seconds),offset);
+  backingSource=src;
+  src.onended=()=>{if(backingSource===src)backingSource=null;src.disconnect();gain.disconnect();};
 }
 function setStageMode(mode){
   const free=mode==='free';
@@ -273,6 +316,7 @@ function renderFreeControls(){
 }
 function startFree({online}){
   if(gameSession)stopGame();
+  stopBacking();
   gameSession={mode:'free',online,part:online?(ownPlayer()?.instrument||selectedInstrument):selectedInstrument,ended:false};
   freeKeyCount=0;
   ui.landing.hidden=true;ui.game.hidden=false;ui.results.hidden=true;
@@ -468,6 +512,7 @@ function finishGame(){
 function stopGame(){
   cancelAnimationFrame(raf);
   gameSession=null;
+  stopBacking();
   audio.stopAll();
   $$('.lane-buttons button,.free-key').forEach(b=>b.classList.remove('active'));
 }

@@ -27,8 +27,8 @@ function connect(url){
 function send(ws,msg){ws.send(JSON.stringify(msg));}
 
 await test('partituras originais: 4 instrumentos, progressão e duração',()=>{
-  assert.equal(songs.length,4);assert.equal(instruments.length,4);
-  assert.deepEqual(instruments.map(i=>instrumentLayouts[i.id].keys.length),[6,8,5,4]);
+  assert.equal(songs.length,5);assert.equal(instruments.length,4);
+  assert.deepEqual(instruments.map(i=>instrumentLayouts[i.id].keys.length),[2,4,4,4]);
   for(const s of songs){
     const chart=createChart(s.id);
     assert.ok(chart.duration>35);
@@ -124,9 +124,9 @@ await test('modo livre: inicio multiplayer, evento de bateria e validacao de tec
   send(host,{type:'start',mode:'free'});
   assert.equal((await started).mode,'free');
   const note=waitMessage(host,m=>m.type==='jam');
-  send(guest,{type:'jam',lane:7});
+  send(guest,{type:'jam',lane:3});
   const hit=await note;
-  assert.equal(hit.instrument,'drums');assert.equal(hit.lane,7);
+  assert.equal(hit.instrument,'drums');assert.equal(hit.lane,3);
   const invalid=waitMessage(host,m=>m.type==='jam'&&m.lane===99,250).then(()=>true,()=>false);
   send(guest,{type:'jam',lane:99});
   assert.equal(await invalid,false);

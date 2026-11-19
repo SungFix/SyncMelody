@@ -36,3 +36,12 @@
 .lane-buttons button{width:min(68px,calc(100% - 6px));font-size:clamp(12px,2.2vw,20px)}
 @media(max-width:600px){.lane-buttons button{height:45px;min-width:0;width:calc(100% - 4px);font-size:clamp(12px,3.3vw,16px)}.free-key-grid{grid-template-columns:repeat(var(--free-cols,4),minmax(0,1fr))}}
 .is-free .score-label{display:none}
+
+/* Importação da gravação local: acessível, responsiva e sem publicar o áudio. */
+.mp3-import{background:#202333;border:1px dashed #57536c;border-radius:9px;padding:13px;margin:-8px 0 18px}
+.mp3-import .field-label{font-size:10px;color:#dcff9b;margin-bottom:8px;font-weight:800;letter-spacing:.8px}
+.mp3-import input[type=file]{width:100%;max-width:100%;color:#d5d2e3;font-size:12px;background:#181c2a;border-radius:5px;padding:8px;box-sizing:border-box}
+.mp3-import input::file-selector-button{background:#d5ff6a;color:#1e241b;border:0;border-radius:4px;padding:7px 9px;font-weight:800;cursor:pointer;margin-right:8px}
+.mp3-import p{font-size:11px;line-height:1.5;color:#aaa9bb;margin:9px 0 0}
+.mp3-import p.ready{color:#d5ff6a}
+@media(max-width:440px){.mp3-import{padding:10px}.mp3-import input{font-size:10px}}

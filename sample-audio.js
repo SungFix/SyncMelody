@@ -8,7 +8,7 @@ import {instrumentLayouts} from './music.js';
 
 const FONT_NAMES={guitar:'distortion_guitar',bass:'electric_bass_pick',contrabass:'acoustic_bass'};
 const FONT_BASE='https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM';
-const DRUM_FILES=['kick.wav','snare.wav','hat-closed.wav','hat-opened.wav','tom.wav','ride.wav','tom-2.wav','crash.wav'];
+const DRUM_FILES=['kick.wav','snare.wav','hat-closed.wav','crash.wav'];
 const DRUM_BASE='https://media.githubusercontent.com/media/cluesurf/wavebase/refs/heads/make/base/drum';
 const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const noteNumber=name=>{const m=/^([A-G])(#?)(-?\d+)$/.exec(name);if(!m)return null;

@@ -53,8 +53,13 @@
 
         <div class="lobby-panel">
           <div class="section-heading"><div><div class="section-kicker">02 / SUA SESSÃO</div><h2>Entre no jogo<span class="period">.</span></h2></div><span class="session-icon">✦</span></div>
-          <div class="song-header"><span class="field-label">ESCOLHA A MÚSICA</span><span id="song-count" class="micro-info">04 FAIXAS ORIGINAIS</span></div>
+          <div class="song-header"><span class="field-label">ESCOLHA A MÚSICA</span><span id="song-count" class="micro-info">4 ORIGINAIS + SEU MP3</span></div>
           <div class="song-list" id="song-list"></div>
+          <div class="mp3-import">
+            <label for="local-mp3" class="field-label">🎧 CARREGAR SUA MÚSICA (NO SEU APARELHO)</label>
+            <input type="file" id="local-mp3" accept="audio/mpeg,.mp3,audio/mp3" aria-describedby="local-mp3-status" />
+            <p id="local-mp3-status" role="status">Selecione o MP3 de 5:40 para a faixa “Rock do seu MP3”. Cada jogador precisa carregar sua própria cópia. O áudio não é enviado ao GitHub.</p>
+          </div>
           <div id="entry-controls" class="entry-controls">
             <button type="button" id="solo-btn" class="btn btn-primary"><span>▶</span> JOGAR SOZINHO <span class="btn-end">↗</span></button>
             <button type="button" id="free-solo-btn" class="btn btn-free"><span>🎸</span> MODO LIVRE — TESTAR INSTRUMENTOS <span class="btn-end">↗</span></button>
@@ -84,7 +89,7 @@
       <div class="stage-grid">
         <section class="play-stage" aria-label="Pista de notas">
           <div class="stage-header"><div><span class="stage-kicker">VOCÊ TOCA</span><h2 id="active-instrument-name">GUITARRA <span>🎸</span></h2></div><div class="stage-bpm"><span>RITMO</span><strong id="game-bpm">112 BPM</strong></div></div>
-          <div class="lane-board" id="lane-board"><canvas id="notes-canvas" aria-label="Notas descendo em quatro faixas"></canvas><div id="countdown" class="countdown" aria-live="polite" hidden>3</div><div id="judgement" class="judgement" aria-live="polite"></div><div class="lane-buttons" id="rhythm-keys"></div></div>
+          <div class="lane-board" id="lane-board"><canvas id="notes-canvas" aria-label="Notas descendo nas faixas do seu instrumento"></canvas><div id="countdown" class="countdown" aria-live="polite" hidden>3</div><div id="judgement" class="judgement" aria-live="polite"></div><div class="lane-buttons" id="rhythm-keys"></div></div>
           <div id="free-panel" class="free-panel" hidden>
             <div class="free-intro"><span class="free-kicker">ENSAIO LIVRE</span><h3>Seu instrumento. Seu som.</h3><p>Sem notas predefinidas. Toque as teclas ou use o mouse e a tela do celular. Cada tecla é uma corda ou peça real.</p></div>
             <label class="field-label" for="free-instrument-select">INSTRUMENTO (NO MODO SOLO)</label>

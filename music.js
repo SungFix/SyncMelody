@@ -1,3 +1,4 @@
+import {importedSongEvents} from './imported-chart.js';
 /**
  * SyncMelody Rock Edition — partituras e músicas 100% originais.
  * Nenhuma melodia, riff ou gravação comercial é reproduzida.
@@ -13,13 +14,13 @@ export const instruments = [
 // Controles adaptados ao instrumento — também usados no modo livre.
 // Os números indicam notas MIDI reais de cordas soltas e os nomes das peças.
 export const instrumentLayouts = {
-  guitar: {keys:['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'], notes:[40,45,50,55,59,64],
-    names:['Mi grave','Lá','Ré','Sol','Si','Mi agudo']},
-  drums: {keys:['KeyA','KeyS','KeyD','KeyF','KeyJ','KeyK','KeyL','Semicolon'], notes:[36,38,42,46,45,51,41,49],
-    names:['Bumbo','Caixa','Chimbal fechado','Chimbal aberto','Tom alto','Prato ride','Tom grave','Crash']},
-  bass: {keys:['KeyA','KeyS','KeyD','KeyJ','KeyK'], notes:[23,28,33,38,43],
-    names:['Si grave','Mi','Lá','Ré','Sol']},
-  contrabass: {keys:['KeyA','KeyS','KeyJ','KeyK'], notes:[28,33,38,43],
+  guitar: {keys:['KeyF','KeyJ'], notes:[40,52],
+    names:['Riff / acorde','Solo / melodia']},
+  drums: {keys:['KeyD','KeyF','KeyJ','KeyK'], notes:[36,38,42,49],
+    names:['Bumbo','Caixa','Chimbal','Prato']},
+  bass: {keys:['KeyD','KeyF','KeyJ','KeyK'], notes:[28,33,38,43],
+    names:['Mi','Lá','Ré','Sol']},
+  contrabass: {keys:['KeyD','KeyF','KeyJ','KeyK'], notes:[28,33,38,43],
     names:['Mi','Lá','Ré','Sol']}
 };
 export const keyLabel = code => code==='Semicolon'?';':code.replace(/^Key/,'');
@@ -33,7 +34,9 @@ export const songs = [
   {id:'ecos-do-asfalto', name:'Ecos do Asfalto', artist:'SYNCMelody Original', bpm:92, bars:24, root:50,
     genre:'ROCK ALTERNATIVO', difficulty:1, description:'Clima melancólico, peso e espaço para tocar', progression:[0,8,3,5], style:'alternative'},
   {id:'ceu-em-ruinas', name:'Céu em Ruínas', artist:'SYNCMelody Original', bpm:124, bars:24, root:55,
-    genre:'HARD ROCK', difficulty:2, description:'Refrão de arena e riffs marcantes', progression:[0,5,10,7], style:'hardrock'}
+    genre:'HARD ROCK', difficulty:2, description:'Refrão de arena e riffs marcantes', progression:[0,5,10,7], style:'hardrock'},
+  {id:'arquivo-rock', name:'Rock do seu MP3', artist:'Arquivo local de cada jogador', bpm:123, bars:174, root:52,
+    genre:'MÚSICA ENVIADA · 5:40', difficulty:2, description:'Mapa aproximado dos ataques do MP3 enviado', progression:[0,3,5,7], style:'local', source:'local', duration:340.24}
 ];
 
 const riffs = {
@@ -45,6 +48,17 @@ const riffs = {
 
 export function createChart(songId) {
   const song = songs.find(track => track.id === songId) || songs[0];
+  if(song.source === 'local'){
+    const events = [];
+    for(const part of instruments.map(i=>i.id)){
+      for(const [t,lane,pitch,accent] of importedSongEvents[part]){
+        events.push({part,t,lane,pitch,accent:!!accent,chord:part==='guitar'&&lane===0&&!!accent,length:.2});
+      }
+    }
+    events.sort((a,b)=>a.t-b.t || a.lane-b.lane);
+    events.forEach((note,index)=>{note.id=index;note.index=index;});
+    return {song,events,byPart:Object.fromEntries(instruments.map(i=>[i.id,events.filter(e=>e.part===i.id)])),duration:song.duration,beat:60/song.bpm};
+  }
   const beat = 60 / song.bpm;
   const events = [];
   let eventId = 0;
@@ -94,9 +108,9 @@ export function createChart(songId) {
       if(b===1||b===3)put('drums',bar,b,1,38,.16);
       if(!relaxed || b%2===0)put('drums',bar,b+.5,2,42,.10);
       if(heavy&&b===2)put('drums',bar,b+.75,2,42,.09);
-      if(b===0&&(chorus||bar===0))put('drums',bar,0,7,49,.35);
-      if(ending&&b===3)put('drums',bar,3.5,6,41,.22);
-      if(heavy&&b===3)put('drums',bar,3.75,5,51,.10);
+      if(b===0&&(chorus||bar===0))put('drums',bar,0,3,49,.35);
+      if(ending&&b===3)put('drums',bar,3.5,3,49,.22);
+      if(heavy&&b===3)put('drums',bar,3.75,2,42,.10);
     }
   }
 
