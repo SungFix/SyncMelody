@@ -1,68 +1,43 @@
-# SyncMelody 🎶
+# SyncMelody — Rock Studio (Modo Livre)
 
-Jogo musical cooperativo para **1 a 4 pessoas** no navegador. Cada pessoa controla um instrumento diferente — teclado, baixo, sintetizador ou bateria — com as teclas **D, F, J, K** ou pelo toque na tela.
+**Jogo musical para 1 a 4 pessoas**, no navegador. Dois modos:
 
-## Abrir o jogo
+- **Partitura:** músicas originais em que cada jogador acompanha notas em pistas do seu instrumento.
+- **Ensaio livre:** toque espontaneamente, sem notas predefinidas, sozinho ou em grupo. No solo, troque de instrumento sem sair da tela. No modo em grupo, cada instrumento é reservado para uma pessoa.
 
-**https://sungfix.github.io/SyncMelody/**
+## Controles
 
-O GitHub Pages precisa ser ativado **uma única vez** pelo proprietário do repositório:
+| Instrumento | Teclas | Observação |
+| --- | --- | --- |
+| Guitarra | A S D J K L (6) | Cordas de guitarra elétrica; com distorção e acordes no modo partitura |
+| Bateria | A S D F J K L ; (8) | Bumbo, caixa, chimbal fechado e aberto, dois tons e dois pratos |
+| Baixo elétrico | A S D J K (5) | Cinco cordas, com afinação B E A D G |
+| Contrabaixo acústico | A S J K (4) | Quatro cordas, afinação E A D G |
 
-1. Abra [Settings → Pages](https://github.com/SungFix/SyncMelody/settings/pages).
-2. Em **Build and deployment**, escolha **Deploy from a branch**.
-3. Selecione **main** e a pasta **/ (root)**.
-4. Clique em **Save**. Aguarde o GitHub disponibilizar o site.
+Os botões na tela funcionam com mouse e toque. Use o botão **Modo livre — testar instrumentos** na tela principal, ou **Iniciar ensaio livre em grupo** depois de criar uma sala.
 
-Depois de habilitado, o endereço acima abre o jogo diretamente, sem instalar programas.
+## Sons reais e atribuição
 
-## Jogar em equipe
+O jogo usa **amostras de instrumentos gravados**, e não apenas osciladores sintéticos, provenientes de:
 
-1. Selecione um apelido, um instrumento e a música.
-2. Clique em **Criar sala** e compartilhe o link.
-3. Até três amigos entram pelo link ou código.
-4. O líder clica em **Iniciar apresentação**.
-5. Cada um toca as notas do seu instrumento no ritmo. Instrumentos sem jogadores ficam automáticos.
+- **FluidR3 GM**, `distortion_guitar`, `electric_bass_pick` e `acoustic_bass`, distribuídas por **MIDI.js Soundfonts** (CC BY 3.0). Projeto: https://gleitz.github.io/midi-js-soundfonts/ ; licença: https://creativecommons.org/licenses/by/3.0/
+- **ClueSurf Wavebase**, amostras de bateria gravadas (domínio público). Projeto: https://github.com/cluesurf/wavebase
 
-Também há **modo solo**, com acompanhamento automático.
+Não são gravações completas de performances nem emulações de amplificadores profissionais. A guitarra é sampleada e o som é alterado de tom conforme necessário. A qualidade depende do banco de samples e da saída de áudio. Não há gravações de músicas comerciais.
 
-## Multiplayer
+Os arquivos de áudio são baixados durante a publicação pelo GitHub Actions; caso um deles não esteja disponível no site, o app tenta carregar da fonte indicada. O usuário precisa de conexão com a internet para carregar amostras não armazenadas em cache. O modo livre não depende de músicas com notas predefinidas.
 
-Como o GitHub Pages hospeda apenas arquivos estáticos, as salas online utilizam **WebRTC** e **PeerJS Cloud** para sinalização. Quem cria a sala coordena a partida. Não é necessário servidor Node.js para o site publicado.
+## Publicar no GitHub Pages
 
-**Observações:** todos devem ter acesso à internet e usar um navegador com suporte a WebRTC. Algumas redes bloqueiam conexões diretas; o serviço gratuito de terceiros pode ter indisponibilidades ou latência. Se o líder sair, a sala é encerrada. O áudio é sintetizado no navegador e as três músicas são originais.
+O workflow `.github/workflows/pages.yml` publica automaticamente a versão estática em `https://sungfix.github.io/SyncMelody/` (se o Pages estiver habilitado em GitHub Actions).
 
-## Rodar localmente
+Salas online usam **WebRTC + PeerJS** (serviço público de sinalização). Como toda conexão entre navegadores, determinadas redes/firewalls podem impedir a comunicação. Não há servidor dedicado persistente; o líder hospeda a sala.
 
-Basta abrir os arquivos com um servidor estático, por exemplo:
+## Testar localmente
 
 ```bash
-python -m http.server 8000
+npm test
+npm start
 ```
 
-Acesse `http://localhost:8000/`. O modo solo não depende do PeerJS Cloud.
-
-## Arquivos do site
-
-- `index.html`: página e interface
-- `style.css`: visual responsivo
-- `app.js`: jogabilidade, som e interface
-- `music.js`: músicas e partituras
-- `peer-transport.js`: conexão entre até quatro navegadores
-
-O código-fonte local completo da versão anterior (com servidor Node opcional e testes) também está disponível no pacote de desenvolvimento entregue na conversa.
-
-## Rock Edition — repertório
-
-| Música original | Estilo | Dificuldade | BPM |
-|---|---|---|---|
-| Fogo na Garagem | Grunge rock | Média | 108 |
-| Marcha de Aço | Thrash metal | Alta | 156 |
-| Ecos do Asfalto | Rock alternativo | Fácil | 92 |
-| Céu em Ruínas | Hard rock | Média | 124 |
-
-- **Guitarra:** riffs, power chords e distorção sintetizada.
-- **Bateria:** bumbo, caixa, chimbal e prato/tom.
-- **Baixo elétrico:** ataque de palheta e médio-graves.
-- **Contrabaixo acústico:** pizzicato mais suave e profundo.
-
-As quatro partes formam um arranjo simultâneo. Se alguém não escolher um instrumento, a parte é tocada automaticamente. Os sons vêm da Web Audio API e são aproximações sintetizadas dos instrumentos, não gravações reais.
+Acesse http://localhost:3000. O servidor local WebSocket inclui o suporte a salas e ensaio livre; o site publicado no Pages usa WebRTC.

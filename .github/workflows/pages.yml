@@ -26,6 +26,21 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Preparar amostras instrumentais gravadas (CC BY / domínio público)
+        shell: bash
+        run: |
+          mkdir -p samples/soundfonts samples/drums
+          for sound in distortion_guitar electric_bass_pick acoustic_bass; do
+            curl -fLsS --retry 3 --connect-timeout 12 \
+              "https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${sound}-mp3.js" \
+              -o "samples/soundfonts/${sound}-mp3.js" || rm -f "samples/soundfonts/${sound}-mp3.js"
+          done
+          for sound in kick snare hat-closed hat-opened tom ride tom-2 crash; do
+            curl -fLsS --retry 3 --connect-timeout 12 \
+              "https://media.githubusercontent.com/media/cluesurf/wavebase/refs/heads/make/base/drum/${sound}.wav" \
+              -o "samples/drums/${sound}.wav" || rm -f "samples/drums/${sound}.wav"
+          done
+          find samples -type f -printf '%P: %s bytes\n'
       - name: Enviar arquivos estaticos
         uses: actions/upload-pages-artifact@v3
         with:

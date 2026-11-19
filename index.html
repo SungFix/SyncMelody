@@ -11,7 +11,7 @@
 <body>
   <div class="site-shell">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="SyncMelody — início">
+      <a class="brand" href="./" aria-label="SYNCMelody — início">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
         <span>SYNC<span class="brand-accent">MELODY</span><sup>®</sup></span>
       </a>
@@ -57,6 +57,7 @@
           <div class="song-list" id="song-list"></div>
           <div id="entry-controls" class="entry-controls">
             <button type="button" id="solo-btn" class="btn btn-primary"><span>▶</span> JOGAR SOZINHO <span class="btn-end">↗</span></button>
+            <button type="button" id="free-solo-btn" class="btn btn-free"><span>🎸</span> MODO LIVRE — TESTAR INSTRUMENTOS <span class="btn-end">↗</span></button>
             <div class="split-row"><button type="button" id="create-btn" class="btn btn-outline"><span>✳</span> CRIAR SALA</button><button type="button" id="toggle-join-btn" class="btn btn-outline"><span>↳</span> ENTRAR NA SALA</button></div>
             <div class="join-form" id="join-form" hidden><label class="field-label" for="room-code-input">CÓDIGO DA SALA</label><div class="join-input-row"><input id="room-code-input" maxlength="6" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ABC123"/><button id="join-btn" type="button" class="btn btn-compact">ENTRAR →</button></div></div>
             <div class="fine-print"><span class="small-star">✦</span> 1 A 4 PESSOAS · SALAS PRIVADAS POR CÓDIGO</div>
@@ -66,11 +67,12 @@
             <div class="player-list" id="player-list"></div>
             <div id="room-hint" class="room-hint">Convide seus amigos para completar a banda.</div>
             <button type="button" id="start-btn" class="btn btn-primary">▶ INICIAR APRESENTAÇÃO <span class="btn-end">↗</span></button>
+            <button type="button" id="start-free-btn" class="btn btn-free">🎸 INICIAR ENSAIO LIVRE EM GRUPO</button>
             <button type="button" id="leave-btn" class="btn btn-text">← SAIR DA SALA</button>
           </div>
         </div>
       </section>
-      <div class="bottom-note"><span>SEM DOWNLOADS · ÁUDIO SINTETIZADO EM TEMPO REAL</span><span>FEITO PARA JOGAR JUNTO ♡</span></div>
+      <div class="bottom-note"><span>SEM DOWNLOADS · ÁUDIO COM AMOSTRAS GRAVADAS DE INSTRUMENTOS</span><span>FEITO PARA JOGAR JUNTO ♡</span></div>
     </main>
 
     <main id="game" class="game" hidden>
@@ -82,16 +84,23 @@
       <div class="stage-grid">
         <section class="play-stage" aria-label="Pista de notas">
           <div class="stage-header"><div><span class="stage-kicker">VOCÊ TOCA</span><h2 id="active-instrument-name">GUITARRA <span>🎸</span></h2></div><div class="stage-bpm"><span>RITMO</span><strong id="game-bpm">112 BPM</strong></div></div>
-          <div class="lane-board" id="lane-board"><canvas id="notes-canvas" aria-label="Notas descendo em quatro faixas"></canvas><div id="countdown" class="countdown" aria-live="polite" hidden>3</div><div id="judgement" class="judgement" aria-live="polite"></div><div class="lane-buttons"><button type="button" data-lane="0" aria-label="Tocar nota D"><span>D</span></button><button type="button" data-lane="1" aria-label="Tocar nota F"><span>F</span></button><button type="button" data-lane="2" aria-label="Tocar nota J"><span>J</span></button><button type="button" data-lane="3" aria-label="Tocar nota K"><span>K</span></button></div></div>
-          <div class="progress-area"><div class="progress-label"><span>PROGRESSO DA FAIXA</span><span id="progress-time">00:00 / 00:00</span></div><div class="progress-bar"><div id="progress-fill"></div></div></div>
-          <div class="game-instructions">PRESSIONE <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> NO RITMO DAS NOTAS <span>OU TOQUE NOS BOTÕES</span></div>
+          <div class="lane-board" id="lane-board"><canvas id="notes-canvas" aria-label="Notas descendo em quatro faixas"></canvas><div id="countdown" class="countdown" aria-live="polite" hidden>3</div><div id="judgement" class="judgement" aria-live="polite"></div><div class="lane-buttons" id="rhythm-keys"></div></div>
+          <div id="free-panel" class="free-panel" hidden>
+            <div class="free-intro"><span class="free-kicker">ENSAIO LIVRE</span><h3>Seu instrumento. Seu som.</h3><p>Sem notas predefinidas. Toque as teclas ou use o mouse e a tela do celular. Cada tecla é uma corda ou peça real.</p></div>
+            <label class="field-label" for="free-instrument-select">INSTRUMENTO (NO MODO SOLO)</label>
+            <select id="free-instrument-select" aria-label="Trocar instrumento no ensaio livre"></select>
+            <div id="free-key-grid" class="free-key-grid" aria-label="Teclas para tocar livremente"></div>
+            <div class="free-live"><span class="pulse-dot"></span><span id="free-status">SOM PRONTO</span><span id="free-note-count">0 TOQUES</span></div>
+          </div>
+          <div class="progress-area rhythm-only"><div class="progress-label"><span>PROGRESSO DA FAIXA</span><span id="progress-time">00:00 / 00:00</span></div><div class="progress-bar"><div id="progress-fill"></div></div></div>
+          <div class="game-instructions rhythm-only" id="game-instructions">PRESSIONE <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> NO RITMO DAS NOTAS <span>OU TOQUE NOS BOTÕES</span></div>
         </section>
         <aside class="score-stage">
           <div class="score-label">SUA PERFORMANCE <span>✦</span></div>
-          <div class="score-card"><div class="score-card-label">PONTUAÇÃO</div><div class="score-number" id="score-number">000000</div><div class="score-footer"><span>✳ SCORE</span><span id="accuracy">100% PRECISÃO</span></div></div>
-          <div class="combo-card"><div><span>COMBO</span><strong id="combo-number">0</strong></div><div class="combo-decoration">⚡</div></div>
+          <div class="score-card rhythm-only"><div class="score-card-label">PONTUAÇÃO</div><div class="score-number" id="score-number">000000</div><div class="score-footer"><span>✳ SCORE</span><span id="accuracy">100% PRECISÃO</span></div></div>
+          <div class="combo-card rhythm-only"><div><span>COMBO</span><strong id="combo-number">0</strong></div><div class="combo-decoration">⚡</div></div>
           <div class="band-panel"><div class="band-title">SUA BANDA <span id="band-count">1 / 4</span></div><div id="game-players"></div></div>
-          <div class="tip-card"><span>✺</span><div><strong>DICA DE PALCO</strong><p>Acerte perto da linha luminosa para conseguir PERFECT e acumular combos.</p></div></div>
+          <div class="tip-card rhythm-only"><span>✺</span><div><strong>DICA DE PALCO</strong><p>Acerte perto da linha luminosa para conseguir PERFECT e acumular combos.</p></div></div>
         </aside>
       </div>
       <div class="results-backdrop" id="results" hidden><div class="results-modal"><span class="result-spark">✳</span><div class="result-eyebrow">FIM DA APRESENTAÇÃO</div><h2>VOCÊ<br><em>ARREBENTOU!</em></h2><p id="result-message">Sua música ficou incrível!</p><div class="result-stats"><div><span>PONTOS</span><strong id="result-score">0</strong></div><div><span>PRECISÃO</span><strong id="result-accuracy">0%</strong></div><div><span>MAIOR COMBO</span><strong id="result-combo">0</strong></div></div><button type="button" class="btn btn-primary" id="back-to-lobby">↵ VOLTAR AO LOBBY</button></div></div>

@@ -1,5 +1,6 @@
 import {createPeerTransport} from './peer-transport.js';
-import {instruments, songs, createChart} from './music.js';
+import {instruments, songs, createChart, instrumentLayouts, keyLabel} from './music.js';
+import {SampleAudioEngine} from './sample-audio.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -18,115 +19,13 @@ let selectedInstrument='guitar';
 let selectedSong='fogo-na-garagem';
 let socket=null, peerTransport=null, selfId=null, room=null, reconnecting=false, pendingCreateSong=null;
 let serverOffset=0, pingSent=0, noticeTimeout=null, gameSession=null, raf=0, soundMuted=false;
-const KEY_LANES={KeyD:0,KeyF:1,KeyJ:2,KeyK:3,ArrowLeft:0,ArrowDown:1,ArrowUp:2,ArrowRight:3};
+let freeKeyCount=0;
+const currentLayout=()=>instrumentLayouts[gameSession?.part||selectedInstrument];
+const laneForCode=code=>currentLayout().keys.indexOf(code);
 const LANE_COLORS=['#d5ff6a','#ffabd8','#a4baff','#ffd084'];
 const INSTRUMENT_IDS=instruments.map(i=>i.id);
 
-class AudioEngine {
-  constructor(){this.ctx=null;this.master=null;this.noise=null;this.muted=false;this.guitarCurve=null;}
-  async unlock(){
-    if(!this.ctx){
-      const Context=window.AudioContext || window.webkitAudioContext;
-      if(!Context) throw new Error('Seu navegador não suporta áudio Web Audio.');
-      this.ctx=new Context();
-      this.master=this.ctx.createGain();
-      this.master.gain.value=.8;
-      this.master.connect(this.ctx.destination);
-      this.noise=this.makeNoise();
-    }
-    if(this.ctx.state==='suspended') await this.ctx.resume();
-  }
-  makeNoise(){
-    const b=this.ctx.createBuffer(1,Math.floor(this.ctx.sampleRate*.5),this.ctx.sampleRate);
-    const data=b.getChannelData(0);
-    for(let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
-    return b;
-  }
-  setMuted(muted){this.muted=muted;if(this.master)this.master.gain.setTargetAtTime(muted?0:.8,this.ctx.currentTime,.025);}
-  stopAll(){
-    if(!this.ctx||!this.master)return;
-    const old=this.master;
-    old.gain.setTargetAtTime(0,this.ctx.currentTime,.02);
-    this.master=this.ctx.createGain();
-    this.master.gain.value=this.muted?0:.8;
-    this.master.connect(this.ctx.destination);
-    setTimeout(()=>{try{old.disconnect();}catch{}},500);
-  }
-  tone(freq,time,duration,type='sine',volume=.15,filterHz=0,detune=0){
-    const c=this.ctx,osc=c.createOscillator(),gain=c.createGain();
-    osc.type=type;osc.frequency.setValueAtTime(freq,time);osc.detune.value=detune;
-    let input=osc;
-    if(filterHz){const filter=c.createBiquadFilter();filter.type='lowpass';filter.frequency.setValueAtTime(filterHz,time);filter.Q.value=.65;osc.connect(filter);input=filter;}
-    input.connect(gain);gain.connect(this.master);
-    const a=.008,r=Math.max(.06,duration);
-    gain.gain.setValueAtTime(.0001,time);
-    gain.gain.exponentialRampToValueAtTime(Math.max(.00011,volume),time+a);
-    gain.gain.exponentialRampToValueAtTime(.0001,time+r);
-    osc.start(time);osc.stop(time+r+.025);
-  }
-  hiss(time,duration,volume,highpass){
-    const c=this.ctx,src=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();
-    src.buffer=this.noise;filter.type='highpass';filter.frequency.value=highpass;
-    src.connect(filter);filter.connect(gain);gain.connect(this.master);
-    gain.gain.setValueAtTime(Math.max(volume,.0001),time);
-    gain.gain.exponentialRampToValueAtTime(.0001,time+duration);
-    src.start(time);src.stop(time+duration+.01);
-  }
-  play(part,note,when=null,velocity=1){
-    if(!this.ctx||this.ctx.state!=='running')return;
-    const c=this.ctx,t=Math.max(c.currentTime+.002,when??c.currentTime),freq=440*Math.pow(2,(note.pitch-69)/12),v=velocity;
-    if(part==='guitar'){
-      // Power chords e riffs com distorção, filtro de amplificador e palm mute.
-      const duration=note.muted?.14:note.chord?.48:.28;
-      const amp=c.createGain(), highpass=c.createBiquadFilter(), lowpass=c.createBiquadFilter();
-      const shaper=c.createWaveShaper();
-      highpass.type='highpass';highpass.frequency.value=105;
-      lowpass.type='lowpass';lowpass.frequency.value=3300;
-      if(!this.guitarCurve){
-        const drive=65, curve=new Float32Array(2048);
-        for(let i=0;i<curve.length;i++){
-          const x=i*2/(curve.length-1)-1;
-          curve[i]=(3+drive)*x*20*(Math.PI/180)/(Math.PI+drive*Math.abs(x));
-        }
-        this.guitarCurve=curve;
-      }
-      shaper.curve=this.guitarCurve;shaper.oversample='2x';
-      amp.gain.setValueAtTime(.0001,t);
-      amp.gain.exponentialRampToValueAtTime((note.chord?.095:.115)*v,t+.009);
-      amp.gain.exponentialRampToValueAtTime(.0001,t+duration);
-      highpass.connect(shaper);shaper.connect(lowpass);lowpass.connect(amp);amp.connect(this.master);
-      const offsets=note.chord?[0,7,12]:[0];
-      offsets.forEach((semitones,i)=>{
-        const voice=c.createOscillator();voice.type=i%2===0?'sawtooth':'triangle';
-        voice.frequency.value=freq*Math.pow(2,semitones/12);
-        voice.detune.value=i===1?3:i===2?-3:0;
-        voice.connect(highpass);voice.start(t);voice.stop(t+duration+.025);
-      });
-      this.hiss(t,.035,(note.muted?.012:.018)*v,2300);
-    } else if(part==='bass'){
-      // Baixo elétrico: ataque com palheta e grave definido.
-      this.tone(freq,t,.36,'sawtooth',.105*v,750);
-      this.tone(freq,t,.42,'triangle',.11*v,450);
-      this.hiss(t,.026,.011*v,1800);
-    } else if(part==='contrabass'){
-      // Contrabaixo acústico: pizzicato com harmônicos curtos.
-      this.tone(freq,t,.62,'sine',.22*v,450);
-      this.tone(freq*2,t,.34,'triangle',.058*v,660);
-      this.tone(freq*3,t,.18,'sine',.017*v,900);
-      this.hiss(t,.035,.008*v,1400);
-    } else if(part==='drums'){
-      if(note.lane===0){
-        const osc=c.createOscillator(),g=c.createGain();osc.type='sine';
-        osc.frequency.setValueAtTime(145,t);osc.frequency.exponentialRampToValueAtTime(43,t+.16);
-        g.gain.setValueAtTime(.34*v,t);g.gain.exponentialRampToValueAtTime(.0001,t+.22);
-        osc.connect(g);g.connect(this.master);osc.start(t);osc.stop(t+.24);
-      } else if(note.lane===1){this.hiss(t,.19,.20*v,1100);this.tone(175,t,.14,'triangle',.06*v);}
-      else if(note.lane===2){this.hiss(t,.09,.065*v,6500);}
-      else {this.tone(140,t,.18,'triangle',.17*v);this.hiss(t,.20,.07*v,3000);}
-    }
-  }
-}
-const audio=new AudioEngine();
+const audio=new SampleAudioEngine();
 
 function instrument(id){return instruments.find(i=>i.id===id)||instruments[0];}
 function song(id){return songs.find(s=>s.id===id)||songs[0];}
@@ -171,6 +70,7 @@ function renderRoom(){
     ui.playerList.innerHTML=parts.join('');
     ui.roomHint.textContent=room.players.length===1?'Compartilhe o código para chamar seus amigos.':`${room.players.length} de 4 músicos conectados. ${isHost()?'Pode começar quando quiser.':'Aguardando o líder iniciar.'}`;
     ui.startBtn.disabled=!isHost()||room.state!=='lobby';
+    $('#start-free-btn').disabled=ui.startBtn.disabled;
     ui.startBtn.textContent=isHost()?'▶ INICIAR APRESENTAÇÃO':'AGUARDANDO O LÍDER…';
   }
   renderSongs();renderInstrumentChoices();
@@ -231,7 +131,15 @@ function handleServer(msg){
   } else if(msg.type==='room'){
     syncRoom(msg.room);
   } else if(msg.type==='started'){
-    beginGame({online:true,startAt:msg.startAt,songId:msg.songId});
+    if(msg.mode==='free'){startFree({online:true});}
+    else {audio.prepareAll().catch(e=>toast(e.message));beginGame({online:true,startAt:msg.startAt,songId:msg.songId});}
+  } else if(msg.type==='jam' && gameSession?.mode==='free') {
+    if(msg.playerId!==selfId && INSTRUMENT_IDS.includes(msg.instrument)){
+      const keys=instrumentLayouts[msg.instrument].keys;
+      if(Number.isInteger(msg.lane) && msg.lane>=0 && msg.lane<keys.length){
+        audio.play(msg.instrument,{lane:msg.lane,pitch:instrumentLayouts[msg.instrument].notes[msg.lane]},null,.78);
+      }
+    }
   } else if(msg.type==='scores' && room){
     for(const p of msg.players||[]){const target=room.players.find(x=>x.id===p.id);if(target){target.score=p.score;target.combo=p.combo;}}
     if(gameSession)renderBand();
@@ -262,24 +170,41 @@ if(invite){ui.joinForm.hidden=false;ui.roomCodeInput.value=invite;}
 ui.roomCodeInput.addEventListener('input',()=>{ui.roomCodeInput.value=ui.roomCodeInput.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,6);});
 ui.roomCodeInput.addEventListener('keydown',e=>{if(e.key==='Enter')$('#join-btn').click();});
 $('#solo-btn').addEventListener('click',async()=>{
-  try{await audio.unlock();beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
+  try{await audio.unlock();toast('Carregando amostras reais da banda…');await audio.prepareAll();beginGame({online:false,startAt:Date.now()+3500,songId:selectedSong});}
   catch(e){toast(e.message);}
 });
 $('#create-btn').addEventListener('click',async()=>{
-  try{await audio.unlock();await connect('create');pendingCreateSong=selectedSong;socketSend({type:'create',name:cleanName(),instrument:selectedInstrument});}
+  try{await audio.unlock();audio.prepareAll().catch(e=>toast(e.message));await connect('create');pendingCreateSong=selectedSong;socketSend({type:'create',name:cleanName(),instrument:selectedInstrument});}
   catch(e){toast(e.message);}
 });
 $('#join-btn').addEventListener('click',async()=>{
   const code=ui.roomCodeInput.value.toUpperCase().trim();
   if(code.length!==6){toast('Digite o código de 6 caracteres.');return;}
-  try{await audio.unlock();await connect('join',code);socketSend({type:'join',code,name:cleanName(),instrument:selectedInstrument});socketSend({type:'ping',sentAt:Date.now()});}
+  try{await audio.unlock();audio.prepareAll().catch(e=>toast(e.message));await connect('join',code);socketSend({type:'join',code,name:cleanName(),instrument:selectedInstrument});socketSend({type:'ping',sentAt:Date.now()});}
   catch(e){toast(e.message);}
 });
 $('#start-btn').addEventListener('click',async()=>{
   if(!isHost())return;
-  try{await audio.unlock();socketSend({type:'start'});}
+  try{await audio.unlock();socketSend({type:'start',mode:'rhythm'});}
   catch(e){toast(e.message);}
 });
+
+$('#free-solo-btn').addEventListener('click',async()=>{
+  try{await audio.unlock();await audio.prepare(selectedInstrument);startFree({online:false});}
+  catch(e){toast(e.message);}
+});
+$('#start-free-btn').addEventListener('click',async()=>{
+  if(!isHost())return;
+  try{await audio.unlock();await audio.prepare(selectedInstrument);socketSend({type:'start',mode:'free'});}
+  catch(e){toast(e.message);}
+});
+$('#free-instrument-select').addEventListener('change',async e=>{
+  if(gameSession?.mode!=='free'||gameSession.online)return;
+  const next=e.target.value;if(!INSTRUMENT_IDS.includes(next))return;
+  try{await audio.prepare(next);selectedInstrument=next;gameSession.part=next;renderFreeControls();renderBand();}
+  catch(error){toast(error.message);e.target.value=gameSession.part;}
+});
+
 $('#copy-link-btn').addEventListener('click',async()=>{
   if(!room)return;
   const link=`${location.origin}${location.pathname}?room=${room.code}`;
@@ -303,12 +228,13 @@ function beginGame({online,startAt,songId}){
   const part=online?(ownPlayer()?.instrument||selectedInstrument):selectedInstrument;
   const occupied=new Set(online?(room?.players||[]).map(p=>p.instrument):[part]);
   const player=online?ownPlayer():null;
-  const session={online,chart,startAt,part,occupied,score:0,combo:0,maxCombo:0,perfect:0,great:0,good:0,miss:0,
-    notes:chart.byPart[part], hit:new Set(), nextMiss:0,nextAudio:0,ended:false,laneUntil:[0,0,0,0], lastJudge:0,
+  const session={mode:'rhythm',online,chart,startAt,part,occupied,score:0,combo:0,maxCombo:0,perfect:0,great:0,good:0,miss:0,
+    notes:chart.byPart[part], hit:new Set(), nextMiss:0,nextAudio:0,ended:false,laneUntil:Array(instrumentLayouts[part].keys.length).fill(0), lastJudge:0,
     timeOffset:online?serverOffset:0};
   gameSession=session;
   if(player){player.score=0;player.combo=0;}
   ui.landing.hidden=true;ui.game.hidden=false;ui.results.hidden=true;
+  setStageMode('rhythm');renderRhythmControls(part);
   ui.countdown.hidden=false;ui.judgement.classList.remove('show');
   $('#game-song').textContent=chart.song.name;
   $('#game-bpm').textContent=`${chart.song.bpm} BPM`;
@@ -321,6 +247,60 @@ function beginGame({online,startAt,songId}){
   audio.stopAll();
   requestAnimationFrame(()=>{resizeCanvas();drawFrame();});
 }
+function setStageMode(mode){
+  const free=mode==='free';
+  ui.board.hidden=free;$('#free-panel').hidden=!free;
+  $$('.rhythm-only').forEach(element=>element.hidden=free);
+  ui.game.classList.toggle('is-free',free);
+}
+function renderRhythmControls(part){
+  const keys=instrumentLayouts[part].keys;
+  $('#rhythm-keys').style.setProperty('--lanes',keys.length);
+  $('#rhythm-keys').innerHTML=keys.map((code,lane)=>`<button type="button" data-lane="${lane}" aria-label="${escapeHtml(keyLabel(code))} — faixa ${lane+1}"><span>${escapeHtml(keyLabel(code))}</span></button>`).join('');
+  $('#game-instructions').innerHTML=`PRESSIONE ${keys.map(k=>`<kbd>${escapeHtml(keyLabel(k))}</kbd>`).join(' ')} NO RITMO DAS NOTAS <span>OU TOQUE NOS BOTÕES</span>`;
+  $('#rhythm-keys').querySelectorAll('button').forEach(button=>bindPointerButton(button,()=>playLane(Number(button.dataset.lane))));
+}
+function renderFreeControls(){
+  if(!gameSession||gameSession.mode!=='free')return;
+  const part=gameSession.part,layout=instrumentLayouts[part],inst=instrument(part);
+  $('#active-instrument-name').innerHTML=`${inst.name.toUpperCase()} <span>${inst.emoji}</span>`;
+  $('#free-instrument-select').innerHTML=instruments.map(i=>`<option value="${i.id}" ${i.id===part?'selected':''}>${escapeHtml(i.name)} — ${instrumentLayouts[i.id].keys.length} teclas</option>`).join('');
+  $('#free-instrument-select').disabled=gameSession.online;
+  const grid=$('#free-key-grid');grid.style.setProperty('--free-cols',layout.keys.length===8?4:layout.keys.length===6?3:layout.keys.length);
+  grid.innerHTML=layout.keys.map((code,lane)=>`<button type="button" class="free-key" data-lane="${lane}" aria-label="Tocar ${escapeHtml(layout.names[lane])}"><kbd>${escapeHtml(keyLabel(code))}</kbd><small>${escapeHtml(layout.names[lane])}</small></button>`).join('');
+  grid.querySelectorAll('button').forEach(button=>bindPointerButton(button,()=>playFreeLane(Number(button.dataset.lane))));
+  $('#free-note-count').textContent=`${freeKeyCount} TOQUES`;
+}
+function startFree({online}){
+  if(gameSession)stopGame();
+  gameSession={mode:'free',online,part:online?(ownPlayer()?.instrument||selectedInstrument):selectedInstrument,ended:false};
+  freeKeyCount=0;
+  ui.landing.hidden=true;ui.game.hidden=false;ui.results.hidden=true;
+  setStageMode('free');renderFreeControls();
+  $('#game-song').textContent='Ensaio Livre';
+  $('#game-bpm').textContent='SEM RITMO FIXO';
+  $('#game-room-label').textContent=online?`SALA ${room?.code}`:'MODO LIVRE SOLO';
+  $('#free-status').textContent=online?'TOCANDO COM A BANDA':'PRONTO PARA EXPERIMENTAR';
+  renderBand();audio.stopAll();
+}
+function playFreeLane(lane){
+  const g=gameSession;if(!g||g.mode!=='free'||g.ended)return;
+  const layout=instrumentLayouts[g.part];if(lane<0||lane>=layout.keys.length)return;
+  audio.play(g.part,{lane,pitch:layout.notes[lane]},null,1);
+  freeKeyCount++;
+  $('#free-note-count').textContent=`${freeKeyCount} TOQUES`;
+  const button=$(`#free-key-grid button[data-lane="${lane}"]`);
+  button?.classList.add('active');
+  if(button){clearTimeout(button.releaseTimer);button.releaseTimer=setTimeout(()=>button.classList.remove('active'),115);}
+  if(g.online)socketSend({type:'jam',lane});
+}
+function bindPointerButton(button,fn){
+  button.addEventListener('pointerdown',event=>{
+    event.preventDefault();button.setPointerCapture(event.pointerId);fn();button.classList.add('active');
+  });
+  const release=()=>button.classList.remove('active');
+  button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
+}
 function resizeCanvas(){
   const c=ui.canvas,rect=c.getBoundingClientRect();
   if(rect.width<=0||rect.height<=0)return;
@@ -331,7 +311,7 @@ function resizeCanvas(){
 window.addEventListener('resize',resizeCanvas);
 function nowElapsed(g){return (Date.now()+g.timeOffset-g.startAt)/1000;}
 function updateScore(){
-  const g=gameSession;if(!g)return;
+  const g=gameSession;if(!g||g.mode==='free')return;
   ui.score.textContent=String(g.score).padStart(6,'0');
   ui.combo.textContent=g.combo;
   const total=g.perfect+g.great+g.good+g.miss;
@@ -376,7 +356,7 @@ function updateMissed(g,elapsed){
   }
 }
 function playLane(lane){
-  const g=gameSession;if(!g||g.ended)return;
+  const g=gameSession;if(!g||g.ended||g.mode==='free')return;
   const elapsed=nowElapsed(g);
   if(elapsed<0||elapsed>g.chart.duration)return;
   let chosen=null,smallest=.205;
@@ -402,20 +382,17 @@ function playLane(lane){
   updateScore();renderBand();
 }
 window.addEventListener('keydown',e=>{
-  const lane=KEY_LANES[e.code];
-  if(lane===undefined||!gameSession||e.repeat||e.altKey||e.ctrlKey||e.metaKey)return;
+  if(!gameSession||e.repeat||e.altKey||e.ctrlKey||e.metaKey)return;
+  if(e.target instanceof HTMLElement && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  const lane=laneForCode(e.code);if(lane<0)return;
   e.preventDefault();
-  playLane(lane);
+  if(gameSession.mode==='free')playFreeLane(lane);else playLane(lane);
 });
 window.addEventListener('keyup',e=>{
-  const lane=KEY_LANES[e.code];if(lane!==undefined){$(`.lane-buttons button[data-lane="${lane}"]`)?.classList.remove('active');}
-});
-$$('.lane-buttons button').forEach(btn=>{
-  const release=()=>btn.classList.remove('active');
-  btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture(e.pointerId);playLane(Number(btn.dataset.lane));});
-  btn.addEventListener('pointerup',release);
-  btn.addEventListener('pointercancel',release);
-  btn.addEventListener('lostpointercapture',release);
+  if(!gameSession)return;
+  const lane=laneForCode(e.code);if(lane<0)return;
+  if(gameSession.mode==='free')$(`#free-key-grid button[data-lane="${lane}"]`)?.classList.remove('active');
+  else $(`.lane-buttons button[data-lane="${lane}"]`)?.classList.remove('active');
 });
 function drawFrame(){
   const g=gameSession;if(!g||g.ended)return;
@@ -435,9 +412,10 @@ function drawFrame(){
   const w=c.clientWidth,h=c.clientHeight;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
-  const laneW=w/4,lineY=h-108;
+  const laneCount=instrumentLayouts[g.part].keys.length;
+  const laneW=w/laneCount,lineY=h-108;
   // A pista e os limites permanecem visíveis mesmo antes das notas surgirem.
-  for(let lane=0;lane<4;lane++){
+  for(let lane=0;lane<laneCount;lane++){
     ctx.fillStyle=lane%2===0?'#161729':'#1b1b2e';ctx.fillRect(lane*laneW,0,laneW,h);
     ctx.fillStyle='#ffffff0b';ctx.fillRect(lane*laneW,0,1,h);
     if(g.laneUntil[lane]>performance.now()){
@@ -465,8 +443,8 @@ function drawFrame(){
     const y=lineY-delta*speed;
     const x=n.lane*laneW+Math.max(8,laneW*.12),nw=laneW-Math.max(16,laneW*.24),nh=19;
     if(y+nh<-10||y>h+10)continue;
-    ctx.shadowColor=LANE_COLORS[n.lane];ctx.shadowBlur=13;
-    ctx.fillStyle=LANE_COLORS[n.lane];
+    ctx.shadowColor=LANE_COLORS[n.lane%LANE_COLORS.length];ctx.shadowBlur=13;
+    ctx.fillStyle=LANE_COLORS[n.lane%LANE_COLORS.length];
     ctx.beginPath();ctx.roundRect(x,y,nw,nh,5);ctx.fill();
     ctx.shadowBlur=0;ctx.fillStyle='#ffffff65';ctx.fillRect(x+6,y+3,nw-12,2);
   }
@@ -491,10 +469,10 @@ function stopGame(){
   cancelAnimationFrame(raf);
   gameSession=null;
   audio.stopAll();
-  $$('.lane-buttons button').forEach(b=>b.classList.remove('active'));
+  $$('.lane-buttons button,.free-key').forEach(b=>b.classList.remove('active'));
 }
 function exitGame(){
-  stopGame();ui.game.hidden=true;ui.landing.hidden=false;ui.results.hidden=true;
+  stopGame();ui.game.hidden=true;ui.landing.hidden=false;ui.results.hidden=true;setStageMode('rhythm');
   window.scrollTo({top:0,behavior:'instant'});
 }
 window.addEventListener('pagehide',()=>{socket?.close();peerTransport?.close();});

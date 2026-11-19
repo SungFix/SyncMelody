@@ -59,7 +59,7 @@ export async function createPeerTransport({ mode, code, onMessage, onClose, Peer
   };
   const snapshot = () => ({
     code: room.code, hostId: room.hostId, songId: room.songId,
-    state: room.state, startAt: room.startAt,
+    state: room.state, mode:room.mode||'rhythm', startAt: room.startAt,
     players: room.players.map(({id, name, instrument, score, combo}) => ({id, name, instrument, score, combo}))
   });
   const sync = () => broadcast({type:'room', room:snapshot(), serverNow:Date.now()});
@@ -89,7 +89,7 @@ export async function createPeerTransport({ mode, code, onMessage, onClose, Peer
     if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
     if (msg.type === 'ping') return sendTo(id, {type:'pong', echoed:msg.sentAt, serverNow:Date.now()});
     if (msg.type === 'create' && id === selfId) {
-      room = {code:activeCode, hostId:selfId, songId:'fogo-na-garagem', state:'lobby', startAt:null, players:[]};
+      room = {code:activeCode, hostId:selfId, songId:'fogo-na-garagem', state:'lobby', mode:'rhythm', startAt:null, players:[]};
       accept(id, msg.name, msg.instrument); return;
     }
     if (msg.type === 'join') {
@@ -113,11 +113,16 @@ export async function createPeerTransport({ mode, code, onMessage, onClose, Peer
     } else if (msg.type === 'song' && id === room.hostId && room.state === 'lobby') {
       if (SONGS.has(msg.songId)) {room.songId = msg.songId; sync();}
     } else if (msg.type === 'start' && id === room.hostId && room.state === 'lobby') {
-      room.state = 'playing'; room.startAt = Date.now() + 5000;
+      room.mode=msg.mode==='free'?'free':'rhythm';
+      room.state = 'playing'; room.startAt = Date.now() + (room.mode==='free'?1000:5000);
       for (const p of room.players) {p.score=0; p.combo=0; p.done=false;}
       sync();
-      broadcast({type:'started', startAt:room.startAt, songId:room.songId, serverNow:Date.now()});
-    } else if (msg.type === 'hit' && room.state === 'playing') {
+      broadcast({type:'started', mode:room.mode, startAt:room.startAt, songId:room.songId, serverNow:Date.now()});
+    } else if (msg.type === 'jam' && room.state === 'playing' && room.mode==='free') {
+      const limits={guitar:6,drums:8,bass:5,contrabass:4};
+      if(!Number.isInteger(msg.lane)||msg.lane<0||msg.lane>=limits[player.instrument])return;
+      broadcast({type:'jam',playerId:id,instrument:player.instrument,lane:msg.lane});
+    } else if (msg.type === 'hit' && room.state === 'playing' && room.mode!=='free') {
       if (!Number.isInteger(msg.noteIndex) || msg.noteIndex < 0 || msg.noteIndex > 4000) return;
       player.score=clamp(msg.score,99999999); player.combo=clamp(msg.combo,9999);
       broadcast({type:'hit', playerId:id, instrument:player.instrument, noteIndex:msg.noteIndex});
