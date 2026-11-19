@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#090b15">
+  <meta name="description" content="SYNCMelody: jogo musical cooperativo para até 4 pessoas, cada uma com seu instrumento.">
+  <title>SYNCMelody — 4 pessoas. 1 só batida.</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="SYNCMelody — início">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span>SYNC<span class="brand-accent">MELODY</span><sup>®</sup></span>
+      </a>
+      <div class="topbar-right"><span class="pulse-dot"></span> <span>ARCADE MULTIPLAYER</span><span class="topbar-sep">/</span><span>VOL. 01</span></div>
+    </header>
+
+    <main id="landing" class="landing">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> O PALCO É SEU <span class="tiny-star">✳</span> 01—04 PLAYERS</div>
+          <h1 id="hero-title">QUATRO<br><em>INSTRUMENTOS.</em><br>UMA SÓ <span class="outline-text">BATIDA.</span></h1>
+          <p>Entre no ritmo com sua galera. Cada pessoa controla um instrumento diferente. Juntos, vocês viram a música.</p>
+          <div class="hero-mini"><span class="mini-chips"><span>🎹</span><span>🎸</span><span>🎛️</span><span>🥁</span></span><span>ATÉ 4 JOGADORES · EM TEMPO REAL</span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="hero-disc"><div class="disc-center"><span>♪</span></div></div>
+          <div class="floating-label float-a">♪ <span>BE ON BEAT</span></div>
+          <div class="floating-label float-b"><span>4 × 4</span> ✦</div>
+          <div class="big-spark spark-a">✳</div><div class="big-spark spark-b">✦</div>
+          <div class="visual-wave wave-one"></div><div class="visual-wave wave-two"></div>
+        </div>
+      </section>
+
+      <section class="hub" aria-label="Montar banda e escolher música">
+        <div class="setup-panel">
+          <div class="section-heading"><div><div class="section-kicker">01 / SEU SETUP</div><h2>Monte seu som<span class="period">.</span></h2></div><div class="heading-star">✳</div></div>
+          <label class="field-label" for="nickname">SEU APELIDO</label>
+          <div class="input-wrap"><span class="input-icon">@</span><input id="nickname" maxlength="18" autocomplete="nickname" placeholder="Como te chamam?" value="Player 1" /></div>
+          <div class="field-row"><span class="field-label">ESCOLHA SEU INSTRUMENTO</span><span class="micro-info">1 POR PESSOA</span></div>
+          <div class="instruments" id="instrument-options" role="group" aria-label="Instrumento">
+            <button type="button" class="instrument selected" data-instrument="keys" aria-pressed="true"><span class="inst-icon">🎹</span><strong>Teclado</strong><small>MELODIA</small><span class="inst-check">✓</span></button>
+            <button type="button" class="instrument" data-instrument="bass" aria-pressed="false"><span class="inst-icon">🎸</span><strong>Baixo</strong><small>GROOVE</small><span class="inst-check">✓</span></button>
+            <button type="button" class="instrument" data-instrument="lead" aria-pressed="false"><span class="inst-icon">🎛️</span><strong>Synth</strong><small>ENERGIA</small><span class="inst-check">✓</span></button>
+            <button type="button" class="instrument" data-instrument="drums" aria-pressed="false"><span class="inst-icon">🥁</span><strong>Bateria</strong><small>BATIDA</small><span class="inst-check">✓</span></button>
+          </div>
+        </div>
+
+        <div class="lobby-panel">
+          <div class="section-heading"><div><div class="section-kicker">02 / SUA SESSÃO</div><h2>Entre no jogo<span class="period">.</span></h2></div><span class="session-icon">✦</span></div>
+          <div class="song-header"><span class="field-label">ESCOLHA A MÚSICA</span><span id="song-count" class="micro-info">03 FAIXAS ORIGINAIS</span></div>
+          <div class="song-list" id="song-list"></div>
+          <div id="entry-controls" class="entry-controls">
+            <button type="button" id="solo-btn" class="btn btn-primary"><span>▶</span> JOGAR SOZINHO <span class="btn-end">↗</span></button>
+            <div class="split-row"><button type="button" id="create-btn" class="btn btn-outline"><span>✳</span> CRIAR SALA</button><button type="button" id="toggle-join-btn" class="btn btn-outline"><span>↳</span> ENTRAR NA SALA</button></div>
+            <div class="join-form" id="join-form" hidden><label class="field-label" for="room-code-input">CÓDIGO DA SALA</label><div class="join-input-row"><input id="room-code-input" maxlength="6" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ABC123"/><button id="join-btn" type="button" class="btn btn-compact">ENTRAR →</button></div></div>
+            <div class="fine-print"><span class="small-star">✦</span> 1 A 4 PESSOAS · SALAS PRIVADAS POR CÓDIGO</div>
+          </div>
+          <div id="room-controls" class="room-controls" hidden>
+            <div class="room-top"><div><span class="field-label">CÓDIGO DA SALA</span><div class="room-code" id="room-code">------</div></div><button type="button" id="copy-link-btn" class="copy-btn">⎘ COPIAR CONVITE</button></div>
+            <div class="player-list" id="player-list"></div>
+            <div id="room-hint" class="room-hint">Convide seus amigos para completar a banda.</div>
+            <button type="button" id="start-btn" class="btn btn-primary">▶ INICIAR APRESENTAÇÃO <span class="btn-end">↗</span></button>
+            <button type="button" id="leave-btn" class="btn btn-text">← SAIR DA SALA</button>
+          </div>
+        </div>
+      </section>
+      <div class="bottom-note"><span>SEM DOWNLOADS · ÁUDIO SINTETIZADO EM TEMPO REAL</span><span>FEITO PARA JOGAR JUNTO ♡</span></div>
+    </main>
+
+    <main id="game" class="game" hidden>
+      <div class="game-top">
+        <button type="button" class="back-button" id="exit-game">← SAIR</button>
+        <div class="game-track"><span class="onair-dot"></span><div><span class="game-track-label">TOCANDO AGORA</span><strong id="game-song">Neon Rush</strong></div></div>
+        <div class="game-top-right"><span id="game-room-label">MODO SOLO</span><button type="button" id="sound-toggle" class="sound-toggle" aria-label="Silenciar ou ativar som">♫ SOM ON</button></div>
+      </div>
+      <div class="stage-grid">
+        <section class="play-stage" aria-label="Pista de notas">
+          <div class="stage-header"><div><span class="stage-kicker">VOCÊ TOCA</span><h2 id="active-instrument-name">TECLADO <span>🎹</span></h2></div><div class="stage-bpm"><span>RITMO</span><strong id="game-bpm">112 BPM</strong></div></div>
+          <div class="lane-board" id="lane-board"><canvas id="notes-canvas" aria-label="Notas descendo em quatro faixas"></canvas><div id="countdown" class="countdown" aria-live="polite" hidden>3</div><div id="judgement" class="judgement" aria-live="polite"></div><div class="lane-buttons"><button type="button" data-lane="0" aria-label="Tocar nota D"><span>D</span></button><button type="button" data-lane="1" aria-label="Tocar nota F"><span>F</span></button><button type="button" data-lane="2" aria-label="Tocar nota J"><span>J</span></button><button type="button" data-lane="3" aria-label="Tocar nota K"><span>K</span></button></div></div>
+          <div class="progress-area"><div class="progress-label"><span>PROGRESSO DA FAIXA</span><span id="progress-time">00:00 / 00:00</span></div><div class="progress-bar"><div id="progress-fill"></div></div></div>
+          <div class="game-instructions">PRESSIONE <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> NO RITMO DAS NOTAS <span>OU TOQUE NOS BOTÕES</span></div>
+        </section>
+        <aside class="score-stage">
+          <div class="score-label">SUA PERFORMANCE <span>✦</span></div>
+          <div class="score-card"><div class="score-card-label">PONTUAÇÃO</div><div class="score-number" id="score-number">000000</div><div class="score-footer"><span>✳ SCORE</span><span id="accuracy">100% PRECISÃO</span></div></div>
+          <div class="combo-card"><div><span>COMBO</span><strong id="combo-number">0</strong></div><div class="combo-decoration">⚡</div></div>
+          <div class="band-panel"><div class="band-title">SUA BANDA <span id="band-count">1 / 4</span></div><div id="game-players"></div></div>
+          <div class="tip-card"><span>✺</span><div><strong>DICA DE PALCO</strong><p>Acerte perto da linha luminosa para conseguir PERFECT e acumular combos.</p></div></div>
+        </aside>
+      </div>
+      <div class="results-backdrop" id="results" hidden><div class="results-modal"><span class="result-spark">✳</span><div class="result-eyebrow">FIM DA APRESENTAÇÃO</div><h2>SHOW DE<br><em>BOLA!</em></h2><p id="result-message">Sua música ficou incrível!</p><div class="result-stats"><div><span>PONTOS</span><strong id="result-score">0</strong></div><div><span>PRECISÃO</span><strong id="result-accuracy">0%</strong></div><div><span>MAIOR COMBO</span><strong id="result-combo">0</strong></div></div><button type="button" class="btn btn-primary" id="back-to-lobby">↵ VOLTAR AO LOBBY</button></div></div>
+    </main>
+    <div role="status" aria-live="polite" id="toast" class="toast" hidden></div>
+    <footer class="footer"><span>© SYNCMelody · ORIGINAL RHYTHM ARCADE</span><span>MADE TO MAKE NOISE ✳</span></footer>
+  </div>
+  <script defer src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
