@@ -1,64 +1,81 @@
-// Todas as músicas e melodias são composições originais criadas para este jogo.
+/**
+ * SyncMelody Rock Edition — partituras e músicas 100% originais.
+ * Nenhuma melodia, riff ou gravação comercial é reproduzida.
+ * Os quatro músicos tocam partes diferentes do mesmo arranjo.
+ */
 export const instruments = [
-  {id:'keys', name:'Teclado', sub:'Acordes cristalinos', symbol:'✦', color:'#AAB1FF', emoji:'🎹'},
-  {id:'bass', name:'Baixo', sub:'Graves marcantes', symbol:'◉', color:'#70EBC4', emoji:'🎸'},
-  {id:'lead', name:'Synth', sub:'Melodia elétrica', symbol:'⌁', color:'#FF9CD4', emoji:'🎛️'},
-  {id:'drums', name:'Bateria', sub:'Ritmo e impacto', symbol:'✳', color:'#FFD17D', emoji:'🥁'}
+  {id:'guitar', name:'Guitarra', sub:'Riffs e power chords', symbol:'⚡', color:'#FF916D', emoji:'🎸'},
+  {id:'drums', name:'Bateria', sub:'Bumbo, caixa e pratos', symbol:'✳', color:'#FFD17D', emoji:'🥁'},
+  {id:'bass', name:'Baixo elétrico', sub:'Groove com palhetada', symbol:'◉', color:'#70EBC4', emoji:'🎸'},
+  {id:'contrabass', name:'Contrabaixo', sub:'Graves acústicos profundos', symbol:'♩', color:'#B4A4FF', emoji:'🎻'}
 ];
 export const songs = [
-  {id:'neon-rush', name:'Neon Rush', artist:'SYNCBEAT ORIGINAL', bpm:112, bars:24, root:60, genre:'SYNTH POP', difficulty:2, description:'Luzes, pulso e adrenalina', progression:[0,5,9,7]},
-  {id:'pixel-parade', name:'Pixel Parade', artist:'SYNCBEAT ORIGINAL', bpm:138, bars:24, root:62, genre:'ARCADE POP', difficulty:3, description:'Um desfile de notas coloridas', progression:[0,7,5,9]},
-  {id:'midnight-drive', name:'Midnight Drive', artist:'SYNCBEAT ORIGINAL', bpm:96, bars:20, root:57, genre:'CHILLWAVE', difficulty:1, description:'Uma viagem sob o céu noturno', progression:[0,5,3,7]}
+  {id:'fogo-na-garagem', name:'Fogo na Garagem', artist:'SYNCMelody Original', bpm:108, bars:24, root:52,
+    genre:'GRUNGE ROCK', difficulty:2, description:'Guitarras sujas, refrão forte e batida de garagem', progression:[0,3,8,5], style:'grunge'},
+  {id:'marcha-de-aco', name:'Marcha de Aço', artist:'SYNCMelody Original', bpm:156, bars:28, root:52,
+    genre:'THRASH METAL', difficulty:3, description:'Riffs rápidos e bateria acelerada', progression:[0,0,3,5], style:'metal'},
+  {id:'ecos-do-asfalto', name:'Ecos do Asfalto', artist:'SYNCMelody Original', bpm:92, bars:24, root:50,
+    genre:'ROCK ALTERNATIVO', difficulty:1, description:'Clima melancólico, peso e espaço para tocar', progression:[0,8,3,5], style:'alternative'},
+  {id:'ceu-em-ruinas', name:'Céu em Ruínas', artist:'SYNCMelody Original', bpm:124, bars:24, root:55,
+    genre:'HARD ROCK', difficulty:2, description:'Refrão de arena e riffs marcantes', progression:[0,5,10,7], style:'hardrock'}
 ];
-const melodies = {
-  'neon-rush': [[0,2,4,7,4,2,7,9],[7,4,2,0,2,4,7,4],[9,7,4,2,4,7,11,9],[7,4,2,4,0,2,4,7]],
-  'pixel-parade': [[0,4,7,9,7,4,2,4],[7,9,12,9,7,4,7,9],[5,7,9,12,9,7,5,4],[9,7,4,2,4,7,9,12]],
-  'midnight-drive': [[0,2,4,7,4,2,0,2],[5,4,2,0,2,4,5,7],[4,7,9,7,4,2,4,7],[7,4,2,0,2,0,4,2]]
+const riffs = {
+  grunge: [0,0,3,5,7,5,3,0],
+  metal: [0,0,0,3,0,5,3,0],
+  alternative: [0,3,5,3,0,7,5,3],
+  hardrock: [0,5,7,10,7,5,3,0]
 };
-function scale(base, degree) {
-  const major = [0,2,4,5,7,9,11];
-  const octave = Math.floor(degree/7);
-  return base + major[((degree%7)+7)%7] + octave*12;
-}
 export function createChart(songId) {
-  const song = songs.find(s => s.id===songId) || songs[0];
-  const beat = 60/song.bpm;
+  const song = songs.find(track => track.id === songId) || songs[0];
+  const beat = 60 / song.bpm;
   const events = [];
-  let id=0;
-  const melody=melodies[song.id];
-  function put(part, bar, beatAt, lane, pitch, length=0.24) {
-    events.push({id:id++, part, t:2*beat+(bar*4+beatAt)*beat, lane, pitch, length});
+  let eventId = 0;
+  const heavy = song.style === 'metal';
+  const relaxed = song.style === 'alternative';
+  function put(part, bar, beatAt, lane, pitch, length = .25, options = {}) {
+    events.push({id:eventId++, part, t:2*beat+(bar*4+beatAt)*beat,
+      lane, pitch, length, ...options});
   }
   for(let bar=0;bar<song.bars;bar++) {
     const root = song.root+song.progression[bar%4];
-    const phrase=melody[bar%4];
-    const dense=song.id==='pixel-parade';
-    // Teclas: arpejos em quatro alturas para oferecer uma partitura rítmica variada.
+    const ending = bar%4===3;
+    const chorus = Math.floor(bar/4)%2===1;
+    const riff = riffs[song.style];
+    const guitarSteps = heavy?[0,.5,1,1.5,2,2.5,3,3.5]
+      : relaxed?[0,1,2,3]:[0,1,1.5,2,3,3.5];
+    guitarSteps.forEach((step,i)=>{
+      const chord = !heavy ? (step===0 || step===2 || (chorus && step===3)) : (step===0 || step===2 || step===3);
+      const offset = !chord ? riff[(i+bar)%riff.length] : 0;
+      const lane = (i+bar+(chord?0:1))%4;
+      put('guitar',bar,step,lane,root+offset, chord?.44:.19,
+        {chord, muted:heavy&&!chord, accent:step===0||step===2});
+    });
+    const bassSteps = heavy?[0,.5,1.5,2,2.5,3.5]:relaxed?[0,1.5,2.5]:[0,1,2,3];
+    bassSteps.forEach((step,i)=>{
+      const tone = (i%4===3?7:i%4===2?3:0);
+      put('bass',bar,step,(i+bar)%4,root-12+tone,.31,{accent:step===0});
+    });
+    const uprightSteps = heavy?[0,1,2,3]:relaxed?[0,2]:[0,1.5,2,3.5];
+    uprightSteps.forEach((step,i)=>{
+      const walk = i===0?0:i%3===1?7:i%3===2?5:10;
+      put('contrabass',bar,step,(bar+i*2)%4,root-19+walk,.58,{accent:step===0});
+    });
+    // Bateria: D=bombo, F=caixa, J=chimbal, K=tom/prato.
     for(let b=0;b<4;b++) {
-      const lane=[0,2,1,3][(b+bar)%4];
-      const pitch=root+[0,4,7,12][lane];
-      put('keys',bar,b,lane,pitch,0.44);
-      if (dense && b%2===0) put('keys',bar,b+0.5,(lane+1)%4,root+[0,4,7,12][(lane+1)%4],0.18);
-    }
-    // Baixo: uma linha diferente para acompanhar o refrão.
-    for(const [b,lane] of [[0,0],[1.5,2],[2,1],[3.5,2]])
-      put('bass',bar,b,lane,root-24+[0,0,7,12][lane],0.35);
-    // Synth: pequenas frases de oito colcheias, com pausas nas faixas mais tranquilas.
-    for(let k=0;k<8;k++) {
-      if(song.id==='midnight-drive' && [1,5].includes(k)) continue;
-      if(song.id==='neon-rush' && k===5 && bar%2===0) continue;
-      const note=phrase[k];
-      put('lead',bar,k*0.5,(note + k)%4,scale(root+12,note),0.20);
-    }
-    // Bateria: kick, caixa, chimbal e tom nos quatro comandos.
-    for(let b=0;b<4;b++) {
-      put('drums',bar,b,b===0||b===2?0:1,b===0||b===2?36:38,0.10);
-      if (song.id!=='midnight-drive' || b%2===0) put('drums',bar,b+0.5,2,42,0.10);
-      if(dense && b===3) put('drums',bar,b+0.75,3,45,0.10);
+      if(b===0||b===2||heavy&&b===3)put('drums',bar,b,0,36,.12,{accent:b===0});
+      if(b===1||b===3)put('drums',bar,b,1,38,.16);
+      if(!relaxed || b%2===0)put('drums',bar,b+.5,2,42,.10);
+      if(heavy&&b===2)put('drums',bar,b+.75,2,42,.09);
+      if(b===0&&(chorus||bar===0))put('drums',bar,0,3,49,.35);
+      if(ending&&b===3)put('drums',bar,3.5,3,45,.22);
     }
   }
   events.sort((a,b)=>a.t-b.t || a.id-b.id);
-  for(let i=0;i<events.length;i++) events[i].index=i;
-  return {song, events, byPart:Object.fromEntries(instruments.map(i => [i.id,events.filter(e=>e.part===i.id)])),
-    duration:2*beat+song.bars*4*beat+1.5, beat};
+  events.forEach((event,index)=>{event.index=index;});
+  return {
+    song,events,
+    byPart:Object.fromEntries(instruments.map(i=>[i.id,events.filter(e=>e.part===i.id)])),
+    duration:2*beat+song.bars*4*beat+1.5,
+    beat
+  };
 }
